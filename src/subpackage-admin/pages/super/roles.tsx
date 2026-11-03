@@ -22,15 +22,30 @@ function SuperRoles() {
 
   const change = async (m: ClubMember) => {
     const options: { label: string; role: ClubRole }[] =
-      m.clubRole === 'manager'
-        ? [{ label: '降为成员', role: 'member' }]
-        : [{ label: '任命为管理层', role: 'manager' }]
+      m.clubRole === 'super_admin'
+        ? [{ label: '取消超级管理员（降为管理层）', role: 'manager' }]
+        : m.clubRole === 'manager'
+          ? [
+              { label: '降为成员', role: 'member' },
+              { label: '任命为超级管理员', role: 'super_admin' },
+            ]
+          : [
+              { label: '任命为管理层', role: 'manager' },
+              { label: '任命为超级管理员', role: 'super_admin' },
+            ]
     const pick = await Taro.showActionSheet({ itemList: options.map((o) => o.label) }).catch(() => null)
     if (!pick) return
     const target = options[pick.tapIndex]
     try {
       await teamStore.setRole(m.userId, target.role)
-      toast(target.role === 'manager' ? '已任命管理层' : '已降为成员', 'success')
+      toast(
+        target.role === 'super_admin'
+          ? '已任命为超级管理员'
+          : target.role === 'manager'
+            ? '已任命管理层'
+            : '已降为成员',
+        'success'
+      )
     } catch {
       /* store 已提示 */
     }
@@ -45,7 +60,7 @@ function SuperRoles() {
   }
 
   const roster = teamStore.members.filter(
-    (m) => m.status === 'ACTIVE' && m.clubRole !== 'super_admin'
+    (m) => m.status === 'ACTIVE' && m.id !== authStore.cloudActiveTeam?.memberId
   )
 
   return (
@@ -73,13 +88,13 @@ function SuperRoles() {
                 <Text className='text-caption'>{m.duty || '成员'}</Text>
               </View>
               <Text className='text-caption text-brand' onClick={() => change(m)}>
-                {m.clubRole === 'manager' ? '撤销' : '任命'}
+                {m.clubRole === 'super_admin' ? '免职' : m.clubRole === 'manager' ? '撤销' : '任命'}
               </Text>
             </View>
           ))}
           {authStore.isSuper ? (
             <Text className='text-caption' style={{ display: 'block', marginTop: '16rpx' }}>
-              超级管理员不可被授予或撤销；最后一个超管受服务端保护
+              仅首位超级管理员可任免；首位超管自身不可被撤销。普通超级管理员无法任免他人。
             </Text>
           ) : null}
         </Card>

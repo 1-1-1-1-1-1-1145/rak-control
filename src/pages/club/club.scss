@@ -1,28 +1,4 @@
-.team-row--me {
-  background: var(--color-accent);
-  border-radius: var(--radius-md);
-  padding-left: 12rpx;
-  padding-right: 12rpx;
-}
 
-.club-stats {
-  display: flex;
-  margin-top: 24rpx;
-  gap: 32rpx;
-}
-
-.club-stats__item {
-  display: flex;
-  flex-direction: column;
-  gap: 4rpx;
-}
-
-.club-stats__num {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 36rpx;
-  font-weight: 600;
-}
 
 .club-rank {
   width: 48rpx;
@@ -41,6 +17,37 @@
 
 .ann-card:last-child {
   border-bottom: none;
+}
+
+.club-announcement-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8rpx;
+}
+
+.club-announcement-title,
+.club-announcement-author {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.club-announcement-title {
+  overflow-wrap: anywhere;
+}
+
+.club-announcement-author {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-announcement-arrow {
+  flex-shrink: 0;
+  margin-left: 16rpx;
 }
 
 .ann-body {

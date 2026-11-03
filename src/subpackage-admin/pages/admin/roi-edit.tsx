@@ -1,11 +1,10 @@
 import { View, Text, Input, Textarea, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { observer } from 'mobx-react-lite'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PageShell from '@/components/page-shell'
 import { Skeleton } from '@/components/states'
-import { roiStore } from '@/store'
-import * as roiService from '@/services/roi'
+import { authStore, roiStore } from '@/store'
 import {
   ROI_CATEGORY_LABEL,
   ROI_STATUS_LABEL,
@@ -34,12 +33,21 @@ function RoiEdit() {
   const [errs, setErrs] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(mode === 'edit')
+  /** 本页异步回调 ctx 栅栏：切队后迟到结果不写回填/不导航 */
+  const loadGeneration = useRef(0)
+  const clubIdNow = () => authStore.cloudActiveTeam?.clubId ?? null
 
   useEffect(() => {
     if (mode !== 'edit' || !id) return
-    roiService
-      .fetchRoiItem(id)
+    const generation = ++loadGeneration.current
+    const clubBefore = clubIdNow()
+    // cloud 走 Store（roi.get，带 clubId 二次校验）；legacy 走原 service
+    roiStore
+      .fetchOne(id)
       .then((it) => {
+        if (!it) return
+        if (generation !== loadGeneration.current) return
+        if (authStore.isCloud && clubIdNow() !== clubBefore) return
         setTitle(it.title)
         setCategory(it.category)
         setCost(String(it.cost))
@@ -50,8 +58,13 @@ function RoiEdit() {
         setStatus(it.status)
         setNotes(it.notes || '')
       })
-      .catch((e) => toast(e instanceof ApiError ? e.userMessage : '加载失败'))
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (generation !== loadGeneration.current) return
+        toast(e instanceof ApiError ? e.userMessage : '加载失败')
+      })
+      .finally(() => {
+        if (generation === loadGeneration.current) setLoading(false)
+      })
   }, [])
 
   const validate = () => {
@@ -80,8 +93,11 @@ function RoiEdit() {
       notes: notes.trim() || null,
     }
     try {
+      const clubBefore = clubIdNow()
       if (mode === 'edit' && id) await roiStore.update(id, input)
       else await roiStore.create(input)
+      // 切队后不继续导航（旧 A 的保存不在 B 收尾）
+      if (authStore.isCloud && clubIdNow() !== clubBefore) return
       setTimeout(() => Taro.navigateBack(), 600)
     } catch {
       /* roiStore 已提示 */
@@ -93,7 +109,9 @@ function RoiEdit() {
   const remove = async () => {
     const r = await Taro.showModal({ title: '删除项目', content: '删除后不可恢复' })
     if (r.confirm && id) {
+      const clubBefore = clubIdNow()
       await roiStore.remove(id)
+      if (authStore.isCloud && clubIdNow() !== clubBefore) return
       Taro.navigateBack()
     }
   }

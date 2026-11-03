@@ -1,6 +1,12 @@
 # rak-control 开放问题清单
 
 > ⬜ 待确认 · ✅ 已确认 · ⏭ 跳过/后补 · 🟨 进行中
+>
+> **2026-10-17 更新（见 [ADR-0006](./adr/adr-0006-cloudbase-multiteam-backend.md) 与
+> [多团队设计](./superpowers/specs/2026-10-17-rak-multi-team-isolation-design.md)）**：
+> 下列旧结论已被覆盖，保留仅作历史——A1「单社团」→ **多团队（按 clubId 隔离，各队独立 owner）**；
+> C4「rak-auth 微信契约」→ **已被 CloudBase 云函数路线取代，不做双写**；C10「初始 super_admin 播种」→
+> **改为平台受控开通 + 每队 owner**。新增人工事项见多团队计划 §7。
 
 ## A. 产品与信息架构
 
@@ -40,6 +46,7 @@
 | C8 | worktree？ | 继续主 worktree | ✅ |
 | C9 | manager 能否发邀请码？ | 默认 **可以** | ✅（默认） |
 | C10 | 初始 super_admin 账号？ | 播种你的 userId/openid | ⬜ |
+| C11 | 任务交付附件后端契约？ | 本机演示已支持最新交付附件；真实共享及历史尚未实现，需 rak-auth 按 [任务附件契约](./proposals/rak-auth-task-attachments-contract.md) 实现，步骤见 [任务附件实施教程](./TASK-ATTACHMENTS-GUIDE.md) | 🟨 |
 
 ## D. 数据字段
 

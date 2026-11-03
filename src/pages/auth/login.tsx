@@ -2,10 +2,12 @@ import { View, Text, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { observer } from 'mobx-react-lite'
 import { useEffect, useState } from 'react'
-import { APP_NAME, ROUTES } from '@/constants'
+import { APP_NAME, DEMO_MODE, ROUTES } from '@/constants'
 import { authStore, uiStore } from '@/store'
+import { ensureAppBooted } from '@/store/app-boot'
 import * as authService from '@/services/auth'
 import { ApiError } from '@/utils/request'
+import { decideLoginLanding } from '@/utils/team-guard'
 import './login.scss'
 
 function Login() {
@@ -33,7 +35,33 @@ function Login() {
     }
   }, [authStore.status])
 
+  // cloud：账户已识别但尚未进入任何本队（含 0 队）→ 离开登录页。
+  // 否则 cloud 模式下登录页只有 loading、无任何可点入口，会永久卡住（0 队空态在选队页）。
+  useEffect(() => {
+    const landing = decideLoginLanding({
+      isCloud: authStore.isCloud,
+      accountIdentified: authStore.cloudAccountIdentified,
+      hasActiveTeam: Boolean(authStore.cloudActiveTeam),
+      state: authStore.cloudTeamState,
+    })
+    if (landing === 'TEAM_SELECT') Taro.reLaunch({ url: ROUTES.teamSelect })
+  }, [
+    authStore.isCloud,
+    authStore.cloudAccountIdentified,
+    authStore.cloudActiveTeam,
+    authStore.cloudTeamState,
+  ])
+
   const submitInvite = async () => {
+    if (authStore.isCloud) {
+      // cloud 正式包不做 legacy 邀请码绑定：走「我的→加入团队」入口
+      setErr('云模式下请使用「加入团队」入口，或联系管理层获取申请入口。')
+      return
+    }
+    if (DEMO_MODE) {
+      setErr('邀请码绑定需要连接 Rak 服务端。请从设置页切换演示身份。')
+      return
+    }
     const code = inviteCode.trim().toUpperCase()
     if (code.length < 6) {
       setErr('请输入 7 位邀请码')
@@ -52,6 +80,14 @@ function Login() {
   }
 
   const submitJoin = async () => {
+    if (authStore.isCloud) {
+      setErr('云模式下请使用「加入团队」入口提交入队申请。')
+      return
+    }
+    if (DEMO_MODE) {
+      setErr('入队申请需要连接 Rak 服务端。请从设置页切换演示身份。')
+      return
+    }
     if (!name.trim() || !wechat.trim() || !reason.trim()) {
       setErr('请完整填写姓名、微信号与申请理由')
       return
@@ -77,6 +113,9 @@ function Login() {
   return (
     <View className={`login theme-${uiStore.theme}`}>
       <View className='login__brand'>
+        {DEMO_MODE ? (
+          <Text className='text-caption'>本地演示 · 数据仅保存在当前设备</Text>
+        ) : null}
         <View className='login__brand-row'>
           <View className='login__logo'>
             <Text className='login__logo-text'>R</Text>
@@ -92,6 +131,16 @@ function Login() {
           <View className='login__loading'>
             <View className='login__spinner' />
             <Text className='text-caption'>正在安全登录…</Text>
+            {/*
+              退出登录后（本机会话已清、账户层失效）不会再有 useLaunch；
+              这里提供显式恢复入口，避免停在 loading 无任何可点操作。
+              热启动（后台驻留再打开）由 App.useDidShow 自动恢复。
+            */}
+            {authStore.isCloud && !authStore.cloudAccountIdentified ? (
+              <View className='btn-secondary pressable' onClick={() => void ensureAppBooted()}>
+                <Text>重新进入</Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -120,7 +169,20 @@ function Login() {
           </View>
         ) : null}
 
-        {authStore.status === 'UNBOUND' && !pending ? (
+        {DEMO_MODE && authStore.status === 'UNBOUND' ? (
+          <View className='login__error'>
+            <Text className='text-card-title'>演示身份已退出</Text>
+            <Text className='text-caption'>演示环境不使用微信登录、邀请码或入队申请。</Text>
+            <View
+              className='btn-primary pressable'
+              onClick={async () => authStore.applyLoginOutcome(await authService.wxLogin())}
+            >
+              <Text>进入管理者演示账号</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {!DEMO_MODE && !authStore.isCloud && authStore.status === 'UNBOUND' && !pending ? (
           <View className='login__form'>
             <View className='seg'>
               <View

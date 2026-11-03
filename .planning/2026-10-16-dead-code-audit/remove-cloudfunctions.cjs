@@ -1,0 +1,66 @@
+const fs = require('fs')
+const path = require('path')
+const crypto = require('crypto')
+const root = fs.realpathSync(process.cwd())
+if (path.basename(root) !== 'rak-control') throw new Error('Unexpected root')
+const planDir = '.planning/2026-10-16-dead-code-audit'
+const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')
+const patches = new Map()
+function replace(file, from, to) {
+  const text = patches.get(file) ?? read(file)
+  if (text.split(from).length !== 2) throw new Error('Unique anchor missing: ' + file + ' ' + from)
+  patches.set(file, text.replace(from, to))
+}
+const cfg = JSON.parse(read('project.config.json'))
+if (cfg.cloudfunctionRoot !== 'cloudfunctions/') throw new Error('Unexpected cloud root')
+delete cfg.cloudfunctionRoot
+patches.set('project.config.json', JSON.stringify(cfg, null, 2) + '\n')
+replace('docs/WECHAT-DEVTOOLS-GUIDE.md', '两个结果都应为 `True`。`dist` 是微信开发者工具运行的构建产物。当前项目根目录的 `project.config.json` 已配置 `miniprogramRoot: ./dist` 和 `cloudfunctionRoot: cloudfunctions/`；若要在同一个项目中同时查看 Rak 页面和云函数，导入 `rak-control` 项目根目录。不要选择 `src`、`dist` 或 `cloudfunctions` 子目录作为本次统一项目的导入目录。', '两个结果都应为 `True`。`dist` 是微信开发者工具运行的构建产物。项目根目录的 `project.config.json` 已配置 `miniprogramRoot: dist/`；导入 `rak-control` 项目根目录，不要选择 `src` 或 `dist` 子目录。本地订阅提醒云函数已移除，无需配置云开发环境。')
+replace('docs/WECHAT-DEVTOOLS-GUIDE.md', '项目配置会从 `dist` 加载小程序页面，并从 `cloudfunctions` 加载云函数。', '项目配置会从 `dist` 加载小程序页面。')
+replace('docs/WECHAT-DEVTOOLS-GUIDE.md', '`createSubTask`、`cancelSubTask` 和 `SubtaskScheduler` 会显示在同一项目的云函数目录中，但当前本地演示页面尚未调用它们；函数可见或已部署不代表 Rak 任务流程已经接入这些函数。', '')
+const guide = patches.get('docs/WECHAT-DEVTOOLS-GUIDE.md')
+const start = guide.indexOf('## 订阅提醒（当前未启用）')
+const end = guide.indexOf('## 常见问题', start)
+if (start < 0 || end < 0) throw new Error('Reminder section missing')
+patches.set('docs/WECHAT-DEVTOOLS-GUIDE.md', guide.slice(0, start) + '## 订阅提醒（本地模块已移除）\n\n2026-10-16 已按用户决定移除原有订阅提醒云函数及本地配置，当前小程序不提供这套订阅提醒。若未来需要此能力，须重新设计并接入。\n\n本次仅修改本地项目。若此前在云开发环境部署过相关函数，请另行在云开发控制台核对并停用定时触发器、清理部署；删除本地源码不会自动修改云端资源。\n\n' + guide.slice(end))
+replace('docs/WECHAT-DEVTOOLS-GUIDE.md', '| 云函数目录未显示 | 确认导入的是 `rak-control` 项目根目录，并在根目录 `project.config.json` 中确认 `cloudfunctionRoot` 指向 `./cloudfunctions`。 |\n', '')
+replace('docs/TASK-ATTACHMENTS-GUIDE.md', '附件不使用现有 CloudBase 环境（`cloud1-d4g36r8z6a8908540`）与 `cloudfunctions/` 订阅提醒函数（`createSubTask` / `cancelSubTask` / `SubtaskScheduler`）；它们保持原职责。', '附件使用 `rak-auth` 与私有对象存储方案，不依赖 CloudBase 云函数。本地原订阅提醒云函数已于 2026-10-16 移除，不影响本文附件实施方案。')
+replace('docs/proposals/rak-auth-task-attachments-contract.md', '> 架构：沿用 `rak-auth` 作为任务与权限的业务后端。`createSubTask`、`cancelSubTask`、`SubtaskScheduler` 保持订阅提醒职责。', '> 架构：沿用 `rak-auth` 作为任务与权限的业务后端。本地原订阅提醒云函数已于 2026-10-16 移除，附件方案不依赖它们。')
+replace('docs/proposals/rak-auth-task-attachments-contract.md', '已有 CloudBase 环境不要求迁移，也不作为本契约的隐式上传权限来源。', '本契约不依赖 CloudBase 环境，上传权限由业务后端显式签发。')
+replace('docs/DEAD-CODE-AUDIT.md', '| `cloudfunctions/createSubTask`、`cancelSubTask`、`SubtaskScheduler` | `docs/WECHAT-DEVTOOLS-GUIDE.md:68` 写明「界面暂未接入，发送逻辑也刻意停用」，为订阅提醒预留、**默认保留**；若产品确定取消订阅功能，可整体移除源码并同步 `project.config.json` 的 `cloudfunctionRoot`——本地删文件不会停掉已部署的定时触发器 |', '| 原 `cloudfunctions/createSubTask`、`cancelSubTask`、`SubtaskScheduler` | 首轮清理保留；后经用户明确授权，于 2026-10-16 删除三个本地云函数、cloudfunctionRoot 和环境备忘。云端部署及触发器未操作。 |')
+replace('docs/DEAD-CODE-AUDIT.md', '4. **继续保留**：Taroify 方案、订阅云函数、demo、图标生成工具、实际用到的样式和 JS/.d.ts 入口。', '4. **继续保留**：Taroify 方案、demo、图标生成工具、实际用到的样式和 JS/.d.ts 入口。订阅云函数在首轮保留后，已按用户追加授权删除本地模块。')
+replace('docs/DEAD-CODE-CLEANUP.md', '- cloudfunctions 三个订阅模块、project.config.json 的 cloudfunctionRoot 和环境备忘；未查询或改动云端部署与定时器。', '- 订阅云函数首轮保留，随后用户明确授权删除，现已移除三个本地模块、cloudfunctionRoot 和环境备忘；云端部署与定时器未操作，见下方追加记录。')
+const verifyFile = planDir + '/verify-cleanup.cjs'
+replace(verifyFile, "['cloudfunctions/createSubTask/index.js', 'cloudfunctions/cancelSubTask/index.js', 'cloudfunctions/SubtaskScheduler/index.js', 'scripts/gen-tabbar-icons.py'", "['scripts/gen-tabbar-icons.py'")
+replace(verifyFile, "  assert.equal(JSON.parse(read('project.config.json')).cloudfunctionRoot, 'cloudfunctions/')", "  assert(!fs.existsSync('cloudfunctions'))\n  assert(!fs.existsSync('config/cloudbase-env.local'))\n  assert(!Object.hasOwn(JSON.parse(read('project.config.json')), 'cloudfunctionRoot'))\n  assert(!Object.hasOwn(JSON.parse(read('dist/project.config.json')), 'cloudfunctionRoot'))")
+const cloudDir = path.resolve('cloudfunctions')
+if (path.dirname(cloudDir) !== root || fs.lstatSync(cloudDir).isSymbolicLink()) throw new Error('Unsafe cloud directory')
+const cloudFiles = fs.readdirSync(cloudDir, {recursive:true}).map(f => path.join('cloudfunctions', f)).filter(f => {
+  const st = fs.lstatSync(f)
+  if (st.isSymbolicLink()) throw new Error('Unexpected symlink')
+  return st.isFile()
+})
+if (cloudFiles.length !== 7 || fs.readdirSync(cloudDir).sort().join(',') !== 'SubtaskScheduler,cancelSubTask,createSubTask') throw new Error('Unexpected cloud tree')
+const deleted = [...cloudFiles, 'config/cloudbase-env.local']
+const backupRoot = path.join(path.dirname(root), 'rak-control-cloudfunctions-backup-' + new Date().toISOString().replace(/[:.]/g, '-'))
+fs.mkdirSync(backupRoot)
+const files = [...new Set([...deleted, ...patches.keys(), planDir + '/task_plan.md', planDir + '/progress.md', planDir + '/cleanup-verification.json'])]
+const manifest = []
+for (const file of files) {
+  const bytes = fs.readFileSync(file)
+  const dest = path.join(backupRoot, file)
+  fs.mkdirSync(path.dirname(dest), {recursive:true})
+  fs.writeFileSync(dest, bytes)
+  if (!bytes.equals(fs.readFileSync(dest))) throw new Error('Backup mismatch')
+  manifest.push({file, bytes:bytes.length, sha256:crypto.createHash('sha256').update(bytes).digest('hex')})
+}
+fs.writeFileSync(path.join(backupRoot, 'manifest.json'), JSON.stringify({root, files:manifest}, null, 2))
+fs.appendFileSync(planDir + '/task_plan.md', '\n## Phase 7: 删除本地订阅云函数\nStatus: in_progress\n用户追加授权：备份后删除三个本地云函数、cloudfunctionRoot、环境备忘并同步文档；重跑类型、单测及开发构建。云端部署不在本地删除动作范围内。\n')
+for (const [file, content] of patches) fs.writeFileSync(file, content)
+fs.rmSync(cloudDir, {recursive:true})
+fs.unlinkSync('config/cloudbase-env.local')
+const result = {date:'2026-10-16', backupRoot, deleted, edited:[...patches.keys()], cloudDeploymentChanged:false, status:'verification pending'}
+fs.writeFileSync(planDir + '/cloudfunction-removal.json', JSON.stringify(result, null, 2))
+fs.appendFileSync(planDir + '/progress.md', '\n2026-10-16：用户明确授权删除订阅云函数。完成三个本地函数目录（7 文件）、config/cloudbase-env.local、project.config.json 配置和文档清理；备份：' + backupRoot + '。构建验证待完成。\n')
+fs.appendFileSync('docs/DEAD-CODE-CLEANUP.md', '\n## 追加清理：本地订阅云函数\n\n2026-10-16 用户明确授权，已删除 createSubTask、cancelSubTask、SubtaskScheduler 三个目录（7 个文件）、config/cloudbase-env.local，并移除 project.config.json 的 cloudfunctionRoot。同步开发者工具指南、附件教程/契约、审计报告及验证脚本。\n\n修改前备份：`' + backupRoot.split(path.sep).join('/') + '`。未查询、删除或停用云端部署和触发器；如曾部署，仍需另行核对云端资源。验证结果待本轮构建后补充。\n')
+console.log(JSON.stringify(result, null, 2))

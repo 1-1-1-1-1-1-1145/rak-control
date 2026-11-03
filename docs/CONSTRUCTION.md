@@ -8,6 +8,14 @@
 > **状态**：规划已收敛核心产品裁决（2026-09-18）。AppID / API 域名等接入项可后补，
 > 不阻塞脚手架与 UI。rak-auth 契约提案见
 > [docs/proposals/rak-auth-wechat-auth-contract.md](./proposals/rak-auth-wechat-auth-contract.md)。
+>
+> **2026-10-17 更新（当前实施路线）**：下方 §2/§3 的「rak-auth 唯一后端 / PG auth schema / JWT 登录 / COS/Flyway」
+> 已被 [ADR-0006](./adr/adr-0006-cloudbase-multiteam-backend.md) 取代——正式业务真源改为
+> **CloudBase 云函数 + 文档数据库 + 私有云存储**，并支持**同一微信多团队**（按 clubId 逻辑隔离，各队独立 owner）。
+> 协议见 [cloud-v2.md](./api/cloud-v2.md)。执行主入口为
+> [多团队实施计划](./superpowers/plans/2026-10-17-rak-multi-team-isolation-plan.md) 与
+> [多团队设计](./superpowers/specs/2026-10-17-rak-multi-team-isolation-design.md)。
+> 旧 rak-auth 提案保留为**历史资料（非当前实施路线）**，**不做双写**；§2/§3 旧约束仅作历史记录。
 
 ---
 
@@ -296,8 +304,6 @@ rak-control/
 │   ├── styles/
 │   │   ├── tokens.scss
 │   │   └── theme/
-│   │       ├── light.scss
-│   │       ├── dark.scss
 │   │       └── taroify-overrides.scss
 │   ├── pages/…
 │   ├── subpackage-admin/…

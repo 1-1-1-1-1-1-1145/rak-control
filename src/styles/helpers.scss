@@ -14,22 +14,11 @@
   box-sizing: border-box;
 }
 
-.page--flush {
-  padding-left: 0;
-  padding-right: 0;
-  padding-top: 0;
-}
-
 .surface-card {
   background: var(--color-card);
   border: var(--hairline) solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-card);
-}
-
-.surface-muted {
-  background: var(--color-muted);
-  border-radius: var(--radius-md);
 }
 
 .text-brand {
@@ -169,11 +158,6 @@
 
 .btn-primary::after {
   border: none;
-}
-
-.btn-primary--pressed {
-  opacity: 0.85;
-  transform: scale(0.98);
 }
 
 .btn-primary--disabled {
@@ -339,17 +323,10 @@
 }
 
 /* ===== 通用补充（bento 重做新增） ===== */
-.metric-card__value--sm {
-  font-size: 40rpx;
-}
 
 .flex-1 {
   flex: 1;
   min-width: 0;
-}
-
-.mt-8 {
-  margin-top: 8rpx;
 }
 
 /* 分段器（任务池/ROI 列表/管理端共用） */
@@ -386,17 +363,6 @@
   color: var(--color-muted-foreground);
 }
 
-.home-badge-dot {
-  min-width: 44rpx;
-  height: 44rpx;
-  padding: 0 12rpx;
-  border-radius: var(--radius-full);
-  background: var(--color-destructive);
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
+.pool-more--retry {
+  color: var(--color-brand);
 }

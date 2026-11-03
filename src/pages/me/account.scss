@@ -1,0 +1,12 @@
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 18rpx 0;
+  border-bottom: var(--hairline) solid var(--color-border);
+}
+
+.account-row__value {
+  font-size: 28rpx;
+}

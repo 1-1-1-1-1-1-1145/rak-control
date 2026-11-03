@@ -10,23 +10,6 @@
   gap: 24rpx;
 }
 
-.me-counts {
-  display: flex;
-  gap: var(--space-gap);
-}
-
-.me-counts__item {
-  flex: 1;
-  background: var(--color-card);
-  border: var(--hairline) solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 24rpx 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-}
-
 /* 绩效圆环（conic-gradient，weapp 支持 CSS 渐变） */
 .perf-ring {
   width: 220rpx;

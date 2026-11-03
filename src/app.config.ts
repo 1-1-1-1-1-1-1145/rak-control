@@ -1,4 +1,5 @@
 export default defineAppConfig({
+  lazyCodeLoading: 'requiredComponents',
   pages: [
     'pages/auth/login',
     'pages/index/index',
@@ -15,6 +16,13 @@ export default defineAppConfig({
     'pages/me/tasks',
     'pages/me/performance',
     'pages/me/settings',
+    'pages/me/team-select',
+    'pages/me/team-join',
+    'pages/me/team-join-status',
+    'pages/me/team-profile',
+    'pages/me/new-team',
+    'pages/me/new-team-applications',
+    'pages/me/account',
     'pages/auth/join-status',
   ],
   subPackages: [
@@ -27,6 +35,8 @@ export default defineAppConfig({
         'pages/admin/roi-edit',
         'pages/admin/members',
         'pages/admin/join-requests',
+        'pages/admin/dismissals',
+        'pages/admin/dissolutions',
         'pages/admin/invites',
         'pages/admin/announcements',
         'pages/admin/club-settings',

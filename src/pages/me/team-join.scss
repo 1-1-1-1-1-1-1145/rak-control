@@ -1,0 +1,18 @@
+.team-join__input {
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  background: var(--color-card);
+  border-bottom: var(--hairline) solid var(--color-border);
+  border-radius: var(--radius-card);
+  font-size: 28rpx;
+}
+
+.team-join__textarea {
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  min-height: 180rpx;
+  background: var(--color-card);
+  border-bottom: var(--hairline) solid var(--color-border);
+  border-radius: var(--radius-card);
+  font-size: 28rpx;
+}

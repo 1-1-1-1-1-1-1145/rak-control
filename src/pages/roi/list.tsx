@@ -36,7 +36,8 @@ function RoiList() {
 
   useDidShow(() => {
     if (authStore.status === 'LOADING') return
-    if (!authStore.isLoggedIn) {
+    // cloud：未就绪时交由 PageShell 统一守卫决定落点（选队/账户页），不在此跳登录
+    if (!authStore.isCloud && !authStore.isLoggedIn) {
       Taro.reLaunch({ url: ROUTES.login })
       return
     }
@@ -87,7 +88,7 @@ function RoiList() {
           ) : null
         }
       >
-        <View className='surface-card'>
+        <View className='surface-card stagger-item'>
           {roiStore.items.map((it) => (
             <View
               key={it.id}

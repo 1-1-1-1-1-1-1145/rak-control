@@ -38,6 +38,101 @@
   padding: 16rpx 20rpx;
 }
 
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.attachment-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 20rpx;
+  padding: 18rpx 20rpx;
+  border: var(--hairline) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  box-sizing: border-box;
+}
+
+.attachment-row--saved {
+  background: var(--color-card);
+}
+
+.attachment-row__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.attachment-row__name {
+  overflow-wrap: anywhere;
+  color: var(--color-foreground);
+  font-size: 26rpx;
+  line-height: 1.45;
+}
+
+.attachment-row__action,
+.attachment-row__remove {
+  flex-shrink: 0;
+  padding: 12rpx 4rpx 12rpx 16rpx;
+  color: var(--color-brand);
+  font-size: 24rpx;
+}
+
+.attachment-row__remove {
+  color: var(--color-destructive);
+}
+
+.submission-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.submission-form__heading,
+.submission-form__attachment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.submission-form__heading .section-label {
+  margin-bottom: 0;
+}
+
+.submission-form__attachment-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.submission-form__textarea {
+  min-height: 200rpx;
+}
+
+.submission-form__pick {
+  width: 100%;
+}
+
+.submission-form__pick--disabled {
+  opacity: 0.45;
+}
+
+.submission-form__notice {
+  padding: 16rpx 18rpx;
+  border-left: 6rpx solid var(--color-warning);
+  background: var(--color-surface-2);
+  color: var(--color-muted-foreground);
+  font-size: 23rpx;
+  line-height: 1.55;
+}
+
 .detail-assignee {
   margin-top: 20rpx;
   padding-top: 20rpx;

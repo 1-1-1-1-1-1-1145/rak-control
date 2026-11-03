@@ -17,6 +17,12 @@ function JoinStatus() {
   const [error, setError] = useState('')
 
   useDidShow(() => {
+    // cloud：入队进度由独立页（teamJoinStatus）承载；本页仅服务旧版邀请码入队，
+    // 不做 legacy HTTP 调用，直接落到确定的 cloud 落点。
+    if (authStore.isCloud) {
+      Taro.reLaunch({ url: ROUTES.teamJoinStatus })
+      return
+    }
     setLoading(true)
     authService
       .fetchJoinStatus()

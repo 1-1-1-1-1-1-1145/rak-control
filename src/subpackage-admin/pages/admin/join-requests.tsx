@@ -7,6 +7,8 @@ import { Card, StatusPill } from '@/components/ui'
 import { ListState } from '@/components/states'
 import { teamStore } from '@/store'
 import { formatDateTime } from '@/utils/format'
+import { toast } from '@/utils/toast'
+import { DEMO_MODE } from '@/constants'
 import '../../admin.scss'
 
 function AdminJoinRequests() {
@@ -23,9 +25,19 @@ function AdminJoinRequests() {
     Taro.stopPullDownRefresh()
   })
 
+  /** 驳回理由必填（服务端 join.reject 强制校验） */
   const reject = async (id: string, name: string) => {
-    const r = await Taro.showModal({ title: '拒绝申请', content: `确定拒绝「${name}」的入队申请？` })
-    if (r.confirm) await teamStore.rejectJoin(id)
+    const r = await showModalEditable({
+      title: `拒绝「${name}」的入队申请`,
+      placeholderText: '驳回理由（必填，将反馈给申请人）',
+    })
+    if (!r.confirm) return
+    const reason = (r.content || '').trim()
+    if (!reason) {
+      toast('驳回必须填写理由')
+      return
+    }
+    await teamStore.rejectJoin(id, reason)
   }
 
   return (
@@ -35,12 +47,19 @@ function AdminJoinRequests() {
       showBack
       requireRole='manage'
       headStatus={
-        <StatusPill dot={teamStore.joinRequests.length > 0} text={`待处理 ${teamStore.joinRequests.length}`} />
+        <StatusPill
+          dot={teamStore.joinRequests.length > 0}
+          text={teamStore.joinError ? '申请列表加载失败' : `待处理 ${teamStore.joinRequests.length}`}
+        />
       }
     >
-      <ListState
-        loading={loading && teamStore.joinRequests.length === 0}
-        error={null}
+      {DEMO_MODE ? (
+        <Card>
+          <Text className='text-caption'>入队申请由 Rak 服务端接收和审批。连接后端后可查看真实申请。</Text>
+        </Card>
+      ) : <ListState
+        loading={loading && teamStore.joinRequests.length === 0 && !teamStore.joinError}
+        error={teamStore.joinError}
         empty={teamStore.joinRequests.length === 0}
         onRetry={reload}
         emptyTitle='没有待处理的申请'
@@ -73,9 +92,20 @@ function AdminJoinRequests() {
             </View>
           ))}
         </Card>
-      </ListState>
+      </ListState>}
     </PageShell>
   )
+}
+
+/** 微信 showModal 的 editable/content 是运行时能力，Taro 类型未覆盖，此处收口一次 */
+function showModalEditable(opts: {
+  title: string
+  placeholderText?: string
+}): Promise<{ confirm: boolean; content?: string }> {
+  return Taro.showModal({
+    ...opts,
+    editable: true,
+  } as Taro.showModal.Option) as unknown as Promise<{ confirm: boolean; content?: string }>
 }
 
 export default observer(AdminJoinRequests)

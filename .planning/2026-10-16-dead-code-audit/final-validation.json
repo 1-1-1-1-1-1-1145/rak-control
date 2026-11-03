@@ -1,0 +1,12 @@
+{
+  "developmentBuildExitCode": 0,
+  "developmentLogResult": "webpack 5.91.0 compiled with 4 warnings in 5106 ms",
+  "productionBuildExitCode": 0,
+  "productionApiMode": "compile-only; https://example.invalid",
+  "testsPassed": true,
+  "typecheckExitCode": 0,
+  "lockfileFrozenCheckExitCode": 0,
+  "boundaryChecks": 8,
+  "finalDistMode": "development demo",
+  "cacheRemoved": true
+}

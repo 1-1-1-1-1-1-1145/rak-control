@@ -1,0 +1,13 @@
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 28rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  border-bottom: var(--hairline) solid var(--color-border);
+}
+
+.team-row--disabled {
+  opacity: 0.6;
+}

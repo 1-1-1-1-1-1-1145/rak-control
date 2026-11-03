@@ -1,0 +1,59 @@
+{
+  "mode": "in-memory only; no application files changed",
+  "changes": [
+    {
+      "file": "src/components/ui.tsx",
+      "removedDeclarations": 3,
+      "removedLines": 52
+    },
+    {
+      "file": "src/utils/format.ts",
+      "removedDeclarations": 1,
+      "removedLines": 6
+    },
+    {
+      "file": "src/utils/toast.ts",
+      "removedDeclarations": 1,
+      "removedLines": 4
+    },
+    {
+      "file": "src/utils/permission.ts",
+      "removedDeclarations": 1,
+      "removedLines": 37
+    },
+    {
+      "file": "src/services/club.ts",
+      "removedDeclarations": 1,
+      "removedLines": 2
+    },
+    {
+      "file": "src/types/domain.ts",
+      "removedDeclarations": 1,
+      "removedLines": 7
+    },
+    {
+      "file": "src/demo/adapter.ts",
+      "removedDeclarations": 2,
+      "removedLines": 10
+    },
+    {
+      "file": "src/store/index.ts",
+      "removedDeclarations": 7,
+      "removedLines": 34
+    },
+    {
+      "file": "src/pages/index/index.tsx",
+      "removedDeclarations": 0,
+      "removedLines": 0
+    },
+    {
+      "file": "src/pages/me/profile.tsx",
+      "removedDeclarations": 0,
+      "removedLines": 0
+    }
+  ],
+  "diagnosticCount": 0,
+  "diagnostics": "",
+  "sassEquivalentAfterDuplicateRemoval": true,
+  "sassSavedExpandedBytes": 3721
+}

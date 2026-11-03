@@ -1,53 +1,25 @@
-import { CLUB_API_BASE } from '@/constants'
-import { request, qs } from '@/utils/request'
+import { CLUB_API_BASE, DEMO_MODE } from '@/constants'
+import { qs } from '@/utils/request'
 import { currentClubId } from '@/services/context'
-import type {
-  Paged,
-  RoiInput,
-  RoiItem,
-  RoiOverview,
-  RoiPeriod,
-} from '@/types/domain'
+import { getDemoServicesLazy } from '@/demo/loader'
+import { requestForBackend } from './backend'
+import { createRoiService } from './domain-entry'
 
-const base = () => `${CLUB_API_BASE}/${currentClubId()}/roi`
+const base = () => `${CLUB_API_BASE}/${currentClubId()}`
 
-export async function fetchRoiItems(q: {
-  status?: string
-  category?: string
-  keyword?: string
-  page?: number
-  size?: number
-} = {}): Promise<Paged<RoiItem>> {
-  return request<Paged<RoiItem>>({
-    url: `${base()}/items${qs({
-      status: q.status,
-      category: q.category,
-      keyword: q.keyword,
-      page: q.page ?? 0,
-      size: q.size ?? 20,
-    })}`,
-  })
-}
+const roiService = createRoiService({
+  demoMode: DEMO_MODE,
+  demo: () => getDemoServicesLazy().roi,
+  request: requestForBackend,
+  clubBase: base,
+  query: qs,
+})
 
-export async function fetchRoiItem(id: string): Promise<RoiItem> {
-  return request<RoiItem>({ url: `${base()}/items/${id}` })
-}
-
-export async function fetchRoiOverview(
-  period: RoiPeriod = 'month'
-): Promise<RoiOverview> {
-  return request<RoiOverview>({ url: `${base()}/overview?period=${period}` })
-}
-
-export const createRoiItem = (input: RoiInput) =>
-  request<RoiItem>({ url: `${base()}/items`, method: 'POST', data: { ...input } })
-
-export const updateRoiItem = (id: string, input: RoiInput) =>
-  request<RoiItem>({
-    url: `${base()}/items/${id}`,
-    method: 'PATCH',
-    data: { ...input },
-  })
-
-export const deleteRoiItem = (id: string) =>
-  request<void>({ url: `${base()}/items/${id}`, method: 'DELETE' })
+export const {
+  fetchRoiItems,
+  fetchRoiItem,
+  fetchRoiOverview,
+  createRoiItem,
+  updateRoiItem,
+  deleteRoiItem,
+} = roiService

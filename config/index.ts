@@ -1,10 +1,21 @@
 import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
+import * as webpack from 'webpack'
 import devConfig from './dev'
 import prodConfig from './prod'
+import { resolveBuildMode } from './build-mode'
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
-export default defineConfig<'webpack5'>(async (merge, { command: _cmd, mode: _mode }) => {
+export default defineConfig<'webpack5'>(async (merge, { command: _cmd, mode }) => {
+  const buildMode = resolveBuildMode({
+    TARO_MODE: mode,
+    NODE_ENV: mode || process.env.NODE_ENV,
+    TARO_APP_DEMO: process.env.TARO_APP_DEMO,
+    TARO_APP_API_BASE: process.env.TARO_APP_API_BASE,
+    TARO_APP_BACKEND: process.env.TARO_APP_BACKEND,
+    TARO_APP_CLOUD_ENV: process.env.TARO_APP_CLOUD_ENV,
+    TARO_APP_ID: process.env.TARO_APP_ID,
+  })
   const baseConfig: UserConfigExport<'webpack5'> = {
     projectName: 'rak-control',
     date: '2026-9-18',
@@ -21,6 +32,10 @@ export default defineConfig<'webpack5'>(async (merge, { command: _cmd, mode: _mo
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
+      __RAK_DEMO_MODE__: JSON.stringify(buildMode.demoMode),
+      __RAK_API_BASE__: JSON.stringify(buildMode.apiBase),
+      __RAK_BACKEND__: JSON.stringify(buildMode.backend),
+      __RAK_CLOUD_ENV__: JSON.stringify(buildMode.cloudEnv),
     },
     copy: {
       patterns: [
@@ -52,49 +67,24 @@ export default defineConfig<'webpack5'>(async (merge, { command: _cmd, mode: _mo
       },
       webpackChain(chain) {
         chain.resolve.plugin('tsconfig-paths').use(TsconfigPathsPlugin)
-      }
-    },
-    h5: {
-      publicPath: '/',
-      staticDirectory: 'static',
-      output: {
-        filename: 'js/[name].[hash:8].js',
-        chunkFilename: 'js/[name].[chunkhash:8].js'
-      },
-      miniCssExtractPluginOption: {
-        ignoreOrder: true,
-        filename: 'css/[name].[hash].css',
-        chunkFilename: 'css/[name].[chunkhash].css'
-      },
-      postcss: {
-        autoprefixer: {
-          enable: true,
-          config: {}
-        },
-        cssModules: {
-          enable: false, // 默认为 false，如需使用 css modules 功能，则设为 true
-          config: {
-            namingPattern: 'module', // 转换模式，取值为 global/module
-            generateScopedName: '[name]__[local]___[hash:base64:5]'
-          }
+        // cloud 正式构建：整体忽略演示模块（`src/demo` 内 runtime/adapter/services 是唯一
+        // 承载演示人物/角色数据的模块）。CommonJS `require` 的依赖在解析期即登记，
+        // `DEMO_MODE` 常量分支无法剔除，故在构建期用 IgnorePlugin 从依赖图中移除。
+        // resourceRegExp 匹配请求串（`./runtime`），contextRegExp 匹配发起方目录（src/demo）。
+        if (buildMode.backend === 'cloud') {
+          chain.plugin('rak-ignore-demo-modules').use(webpack.IgnorePlugin, [
+            {
+              resourceRegExp: /^\.\/(runtime|adapter|services)$/,
+              contextRegExp: /[\\/]demo$/,
+            },
+          ])
         }
       },
-      webpackChain(chain) {
-        chain.resolve.plugin('tsconfig-paths').use(TsconfigPathsPlugin)
-      }
     },
-    rn: {
-      appName: 'taroDemo',
-      postcss: {
-        cssModules: {
-          enable: false, // 默认为 false，如需使用 css modules 功能，则设为 true
-        }
-      }
-    }
   }
 
 
-  if (process.env.NODE_ENV === 'development') {
+  if (buildMode.development) {
     // 本地开发构建配置（不混淆压缩）
     return merge({}, baseConfig, devConfig)
   }

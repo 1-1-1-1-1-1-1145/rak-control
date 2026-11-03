@@ -4,3 +4,13 @@
   color: var(--color-foreground);
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+.demo-ribbon {
+  display: flex;
+  justify-content: center;
+  padding: 8rpx 24rpx;
+  background: var(--color-warning);
+  color: #1a1a22;
+  font-size: 24rpx;
+  font-weight: 600;
+}

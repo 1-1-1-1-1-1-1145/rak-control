@@ -1,0 +1,381 @@
+{
+  "sourceCount": 88,
+  "unusedExports": [
+    {
+      "name": "QUALITY_SCORE",
+      "at": "src/types/domain.ts:100",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "resetDemoState",
+      "at": "src/demo/adapter.ts:367",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "updateTask",
+      "at": "src/services/task.ts:24",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "storageKeys",
+      "at": "src/services/club.ts:130",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "toastError",
+      "at": "src/utils/toast.ts:11",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "formatMoney",
+      "at": "src/utils/format.ts:1",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "SectionTitle",
+      "at": "src/components/ui.tsx:17",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "EmptyState",
+      "at": "src/components/ui.tsx:105",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "MetricCard",
+      "at": "src/components/ui.tsx:142",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "useAuthGuard",
+      "at": "src/utils/permission.ts:33",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "normalizeLoginOutcome",
+      "at": "src/utils/auth-contract.js:51",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "normalizeMeView",
+      "at": "src/utils/auth-contract.js:74",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "validateTaskAttachments",
+      "at": "src/utils/task-attachment-policy.js:11",
+      "usageCount": 0,
+      "uses": []
+    }
+  ],
+  "unusedMembers": [
+    {
+      "name": "getItem",
+      "class": "MemoryDemoStorage",
+      "at": "src/demo/adapter.ts:35",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "setItem",
+      "class": "MemoryDemoStorage",
+      "at": "src/demo/adapter.ts:39",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "removeItem",
+      "class": "MemoryDemoStorage",
+      "at": "src/demo/adapter.ts:43",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "isLoggedIn",
+      "class": "DemoAdapter",
+      "at": "src/demo/adapter.ts:444",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "openTasks",
+      "class": "TaskStore",
+      "at": "src/store/index.ts:243",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "pendingReview",
+      "class": "TaskStore",
+      "at": "src/store/index.ts:247",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "myActive",
+      "class": "TaskStore",
+      "at": "src/store/index.ts:256",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "resetFilters",
+      "class": "TaskStore",
+      "at": "src/store/index.ts:267",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "fetchOne",
+      "class": "TaskStore",
+      "at": "src/store/index.ts:384",
+      "usageCount": 0,
+      "uses": []
+    },
+    {
+      "name": "loading",
+      "class": "TeamStore",
+      "at": "src/store/index.ts:510",
+      "usageCount": 0,
+      "uses": []
+    }
+  ],
+  "inbound": [
+    {
+      "file": "src/app.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/app.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/auth/join-status.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/auth/join-status.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/auth/login.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/auth/login.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/announcement-detail.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/announcement-detail.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/announcement-list.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/announcement-list.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/home.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/home.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/members.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/club/members.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/index/index.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/index/index.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/performance.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/performance.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/profile.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/profile.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/settings.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/settings.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/tasks.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/me/tasks.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/roi/detail.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/roi/detail.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/roi/list.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/roi/list.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/roi/overview.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/roi/overview.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/task/detail.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/task/detail.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/pages/task/pool.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/pages/task/pool.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/announcements.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/announcements.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/club-settings.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/club-settings.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/home.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/home.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/invites.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/invites.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/join-requests.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/join-requests.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/members.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/members.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/review.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/review.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/roi-edit.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/roi-edit.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/task-publish.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/admin/task-publish.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/super/roles.config.ts",
+      "importers": []
+    },
+    {
+      "file": "src/subpackage-admin/pages/super/roles.tsx",
+      "importers": []
+    },
+    {
+      "file": "src/utils/auth-contract.js",
+      "importers": []
+    },
+    {
+      "file": "src/utils/task-attachment-policy.js",
+      "importers": []
+    }
+  ]
+}

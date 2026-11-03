@@ -1,12 +1,14 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { observer } from 'mobx-react-lite'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import PageShell from '@/components/page-shell'
 import { Card } from '@/components/ui'
 import { Skeleton, EmptyView } from '@/components/states'
 import { authStore } from '@/store'
 import * as taskService from '@/services/task'
+import { cloudPerformanceMine } from '@/services/cloud/performance'
+import { toLegacyPerformance } from '@/services/cloud/legacy-view'
 import { ROUTES } from '@/constants'
 import { formatRoiRatio } from '@/utils/format'
 import type { MemberPerformance } from '@/types/domain'
@@ -16,14 +18,34 @@ function MyPerformance() {
   const [perf, setPerf] = useState<MemberPerformance | null>(null)
   const [loading, setLoading] = useState(true)
   const uid = authStore.user?.id
+  /** 本页异步回调 ctx 栅栏：切队后迟到结果不得写入 */
+  const loadGeneration = useRef(0)
+
+  const load = async () => {
+    const generation = ++loadGeneration.current
+    setLoading(true)
+    try {
+      if (authStore.isCloud) {
+        const team = authStore.cloudActiveTeam
+        if (!team || authStore.cloudTeamState !== 'READY') return
+        const clubId = team.clubId
+        const view = await cloudPerformanceMine(clubId)
+        if (generation !== loadGeneration.current) return
+        if (authStore.cloudActiveTeam?.clubId !== clubId) return
+        setPerf(toLegacyPerformance(view))
+        return
+      }
+      if (!uid) return
+      const legacy = await taskService.fetchMemberPerformance(uid)
+      if (generation !== loadGeneration.current) return
+      setPerf(legacy)
+    } finally {
+      if (generation === loadGeneration.current) setLoading(false)
+    }
+  }
 
   useDidShow(() => {
-    if (!uid) return
-    setLoading(true)
-    taskService
-      .fetchMemberPerformance(uid)
-      .then(setPerf)
-      .finally(() => setLoading(false))
+    void load()
   })
 
   const score = perf?.compositeScore ?? 0

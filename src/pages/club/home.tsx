@@ -15,7 +15,8 @@ function ClubHome() {
 
   useDidShow(() => {
     if (authStore.status === 'LOADING') return
-    if (!authStore.isLoggedIn) {
+    // cloud：未就绪时交由 PageShell 统一守卫决定落点（选队/账户页），不在此跳登录
+    if (!authStore.isCloud && !authStore.isLoggedIn) {
       Taro.reLaunch({ url: ROUTES.login })
       return
     }
@@ -112,14 +113,16 @@ function ClubHome() {
                       Taro.navigateTo({ url: `${ROUTES.announcementDetail}?id=${a.id}` })
                     }
                   >
-                    <View className='flex-1'>
-                      <Text className='text-card-title'>
+                    <View className='flex-1 club-announcement-copy'>
+                      <Text className='text-card-title club-announcement-title'>
                         {a.pinned ? '📌 ' : ''}
                         {a.title}
                       </Text>
-                      <Text className='text-caption'>{a.authorName || ''}</Text>
+                      <Text className='text-caption club-announcement-author'>
+                        {a.authorName || ''}
+                      </Text>
                     </View>
-                    <Text className='text-caption'>›</Text>
+                    <Text className='text-caption club-announcement-arrow'>›</Text>
                   </View>
                 ))
               )}

@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-16",
+  "backupRoot": "C:\\Users\\24800\\Desktop\\小程序\\rak-control-cloudfunctions-backup-2026-10-16T11-58-16-353Z",
+  "deleted": [
+    "cloudfunctions\\cancelSubTask\\index.js",
+    "cloudfunctions\\cancelSubTask\\package.json",
+    "cloudfunctions\\createSubTask\\index.js",
+    "cloudfunctions\\createSubTask\\package.json",
+    "cloudfunctions\\SubtaskScheduler\\config.json",
+    "cloudfunctions\\SubtaskScheduler\\index.js",
+    "cloudfunctions\\SubtaskScheduler\\package.json",
+    "config/cloudbase-env.local"
+  ],
+  "edited": [
+    "project.config.json",
+    "docs/WECHAT-DEVTOOLS-GUIDE.md",
+    "docs/TASK-ATTACHMENTS-GUIDE.md",
+    "docs/proposals/rak-auth-task-attachments-contract.md",
+    "docs/DEAD-CODE-AUDIT.md",
+    "docs/DEAD-CODE-CLEANUP.md",
+    ".planning/2026-10-16-dead-code-audit/verify-cleanup.cjs"
+  ],
+  "cloudDeploymentChanged": false,
+  "status": "complete",
+  "verification": {
+    "typecheckExitCode": 0,
+    "testsPassed": 17,
+    "developmentBuildExitCode": 0,
+    "boundaryChecksPassed": 8,
+    "backupHashesVerified": true,
+    "sourceAndDistCloudRootAbsent": true
+  },
+  "originalSchedulerConfig": {
+    "permissions": {
+      "openapi": [
+        "subscribeMessage.send"
+      ]
+    },
+    "triggers": [
+      {
+        "name": "subscriptionTaskScheduler",
+        "type": "timer",
+        "config": "0 * * * * * *"
+      }
+    ]
+  }
+}

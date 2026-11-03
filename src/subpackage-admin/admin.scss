@@ -69,6 +69,22 @@
   background: var(--color-surface-1);
 }
 
+.club-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  border: var(--hairline) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+.club-option--on {
+  border-color: var(--color-brand);
+  background: var(--color-surface-1);
+}
+
 .admin-amount {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;

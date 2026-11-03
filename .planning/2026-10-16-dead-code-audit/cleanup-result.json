@@ -1,0 +1,179 @@
+{
+  "backupRoot": "C:\\Users\\24800\\Desktop\\小程序\\rak-control-cleanup-backup-2026-10-16T11-28-32-753Z",
+  "backupFiles": 31,
+  "preWriteTypeDiagnostics": 0,
+  "written": [
+    {
+      "file": "src\\components\\ui.tsx",
+      "linesBefore": 243,
+      "linesAfter": 191
+    },
+    {
+      "file": "src\\utils\\format.ts",
+      "linesBefore": 51,
+      "linesAfter": 45
+    },
+    {
+      "file": "src\\utils\\toast.ts",
+      "linesBefore": 14,
+      "linesAfter": 10
+    },
+    {
+      "file": "src\\utils\\permission.ts",
+      "linesBefore": 60,
+      "linesAfter": 23
+    },
+    {
+      "file": "src\\services\\club.ts",
+      "linesBefore": 131,
+      "linesAfter": 129
+    },
+    {
+      "file": "src\\types\\domain.ts",
+      "linesBefore": 293,
+      "linesAfter": 286
+    },
+    {
+      "file": "src\\demo\\adapter.ts",
+      "linesBefore": 991,
+      "linesAfter": 981
+    },
+    {
+      "file": "src\\store\\index.ts",
+      "linesBefore": 643,
+      "linesAfter": 609
+    },
+    {
+      "file": "src\\pages\\index\\index.tsx",
+      "linesBefore": 286,
+      "linesAfter": 284
+    },
+    {
+      "file": "src\\pages\\me\\profile.tsx",
+      "linesBefore": 135,
+      "linesAfter": 133
+    },
+    {
+      "file": "src\\components\\page-shell.tsx",
+      "linesBefore": 85,
+      "linesAfter": 83
+    },
+    {
+      "file": "src\\services\\task.ts",
+      "linesBefore": 33,
+      "linesAfter": 32
+    },
+    {
+      "file": "src\\app.scss",
+      "linesBefore": 16,
+      "linesAfter": 15
+    },
+    {
+      "file": "src\\styles\\helpers.scss",
+      "linesBefore": 407,
+      "linesAfter": 370
+    },
+    {
+      "file": "src\\styles\\form.scss",
+      "linesBefore": 42,
+      "linesAfter": 16
+    },
+    {
+      "file": "src\\pages\\club\\club.scss",
+      "linesBefore": 109,
+      "linesAfter": 85
+    },
+    {
+      "file": "src\\pages\\me\\me.scss",
+      "linesBefore": 65,
+      "linesAfter": 48
+    },
+    {
+      "file": "config\\index.ts",
+      "linesBefore": 113,
+      "linesAfter": 76
+    },
+    {
+      "file": "config\\dev.ts",
+      "linesBefore": 11,
+      "linesAfter": 10
+    },
+    {
+      "file": "config\\prod.ts",
+      "linesBefore": 34,
+      "linesAfter": 6
+    },
+    {
+      "file": "package.json",
+      "linesBefore": 96,
+      "linesAfter": 72
+    },
+    {
+      "file": "docs\\construction.md",
+      "linesBefore": 430,
+      "linesAfter": 428
+    }
+  ],
+  "deleted": [
+    "src/styles/theme/light.scss",
+    "src/styles/theme/dark.scss",
+    "src/index.html",
+    "scripts/setup-github-team-repo.js",
+    "scripts/setup-github-team-repo.ps1"
+  ],
+  "declarationChanges": [
+    {
+      "file": "src/components/ui.tsx",
+      "removedDeclarations": 3,
+      "removedLines": 52
+    },
+    {
+      "file": "src/utils/format.ts",
+      "removedDeclarations": 1,
+      "removedLines": 6
+    },
+    {
+      "file": "src/utils/toast.ts",
+      "removedDeclarations": 1,
+      "removedLines": 4
+    },
+    {
+      "file": "src/utils/permission.ts",
+      "removedDeclarations": 1,
+      "removedLines": 37
+    },
+    {
+      "file": "src/services/club.ts",
+      "removedDeclarations": 1,
+      "removedLines": 2
+    },
+    {
+      "file": "src/types/domain.ts",
+      "removedDeclarations": 1,
+      "removedLines": 7
+    },
+    {
+      "file": "src/demo/adapter.ts",
+      "removedDeclarations": 2,
+      "removedLines": 10
+    },
+    {
+      "file": "src/store/index.ts",
+      "removedDeclarations": 7,
+      "removedLines": 34
+    },
+    {
+      "file": "src/pages/index/index.tsx",
+      "removedDeclarations": 0,
+      "removedLines": 0
+    },
+    {
+      "file": "src/pages/me/profile.tsx",
+      "removedDeclarations": 0,
+      "removedLines": 0
+    }
+  ],
+  "removedSelectors": 15,
+  "removedPlatformScripts": 16,
+  "removedDependencies": 8
+}

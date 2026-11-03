@@ -14,14 +14,6 @@ export function Card({
   return <View className={`surface-card ${className}`}>{children}</View>
 }
 
-export function SectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <View className='section-label'>
-      <Text>{children}</Text>
-    </View>
-  )
-}
-
 /* ===== 杂志 Bento 模式（spec 2026-09-19 §2） ===== */
 
 /** 刊头：kicker 英文小标 + display 中文大标题 + 右侧状态胶囊 */
@@ -102,21 +94,6 @@ export function Tile({ face = 'white', mark, title, desc, onClick, children }: {
   )
 }
 
-export function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description?: string
-}) {
-  return (
-    <View className='empty-state'>
-      <Text className='text-card-title'>{title}</Text>
-      {description ? <Text className='text-caption'>{description}</Text> : null}
-    </View>
-  )
-}
-
 export function RoleBadge({ role }: { role?: string | null }) {
   if (role === 'super_admin') {
     return (
@@ -135,35 +112,6 @@ export function RoleBadge({ role }: { role?: string | null }) {
   return (
     <View className='badge'>
       <Text>成员</Text>
-    </View>
-  )
-}
-
-export function MetricCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: string
-  tone?: 'success' | 'warning' | 'brand' | 'muted'
-}) {
-  return (
-    <View className='metric-card'>
-      <Text className='metric-card__label'>{label}</Text>
-      <Text
-        className={`metric-card__value ${
-          tone === 'success'
-            ? 'text-success'
-            : tone === 'warning'
-              ? 'text-warning'
-              : tone === 'brand'
-                ? 'text-brand'
-                : ''
-        }`}
-      >
-        {value}
-      </Text>
     </View>
   )
 }
@@ -199,12 +147,17 @@ export function TaskCard({
           </Text>
         ) : null}
         <View className='row-between task-card__meta'>
-          <View className='row-gap'>
+          <View className='row-gap task-card__meta-categories'>
             <View className='chip'>
               <Text>{TASK_CATEGORY_LABEL[task.category] || task.category}</Text>
             </View>
             {task.repo ? (
               <Text className='text-caption text-mono'>@{task.repo}</Text>
+            ) : null}
+            {task.submissionAttachments?.length ? (
+              <View className='chip task-card__attachments'>
+                <Text>附件 {task.submissionAttachments.length}</Text>
+              </View>
             ) : null}
           </View>
           <Text className='text-caption'>

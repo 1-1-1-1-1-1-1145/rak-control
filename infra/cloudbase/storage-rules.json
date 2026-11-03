@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "多团队 DESIGN §11.1。私有存储，客户端 SDK 直接读写一律拒绝；业务文件字节只能经云函数授权（exact-key 受限 PUT）或受控分块函数，绝不公开桶。基线采用客户端 read/write=false。",
+  "clientAccess": { "read": false, "write": false },
+  "pathPolicy": {
+    "generatedBy": "server",
+    "stagingPattern": "clubs/{clubId}/staging/{sessionId}/blob",
+    "finalPattern": "clubs/{clubId}/final/{sessionId}/{attemptId}/blob",
+    "note": "路径前缀仅组织，不代替授权；不接收客户端自定路径，不手拼 cloud://。"
+  }
+}

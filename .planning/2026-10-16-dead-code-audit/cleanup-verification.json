@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "5 target files removed",
+    "unused symbols and bare prop removed",
+    "only targeted Store and DemoAdapter members removed",
+    "only specified CSS rules removed; retained rule content unchanged",
+    "weapp scripts and dependencies intact; package importer matches lock",
+    "26 registered page artifacts and 20 theme icons intact",
+    "pending modules, icon tooling, runtime JS and declarations retained",
+    "all original backup hashes verified"
+  ],
+  "failures": [],
+  "passed": 8,
+  "failed": 0
+}

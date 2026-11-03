@@ -1,0 +1,10 @@
+{
+  "mode": "production-real-api-compile-only",
+  "apiBase": "https://example.invalid",
+  "backendRequestsPerformed": false,
+  "registeredPages": 26,
+  "missingPageArtifacts": [],
+  "placeholderPresent": true,
+  "exitCode": 0,
+  "log": ".planning/2026-10-16-dead-code-audit/build-production.log"
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "note": "多团队 DESIGN §12 / BASE-DESIGN §13.2。客户端只能调用 rakApi/rakFiles（仍需函数内鉴权）；worker(rakMaintenance) 仅平台可信来源，客户端 invoke 一律拒绝。init/status/confirm/cancel/downloadUrls 等文件业务授权全在函数内。",
+  "functions": {
+    "rakApi": { "clientInvoke": true, "anonymous": false },
+    "rakFiles": { "clientInvoke": true, "anonymous": false },
+    "rakMaintenance": { "clientInvoke": false, "anonymous": false }
+  }
+}

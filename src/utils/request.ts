@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 import { API_BASE, ROUTES, WECHAT_UI_BASE } from '@/constants'
 import type { ProblemDetail } from '@/types/domain'
+import { normalizeLoginOutcome } from './auth-contract.js'
 
 export interface ApiErrorShape {
   status: number
@@ -81,18 +82,16 @@ export function silentRelogin(): Promise<boolean> {
     reloginPromise = (async () => {
       try {
         const { code } = await Taro.login()
-        const res = await Taro.request<ProblemDetail & {
-          bound?: boolean
-          accessToken?: string
-        }>({
+        const res = await Taro.request<ProblemDetail>({
           url: `${API_BASE}${WECHAT_UI_BASE}/login`,
           method: 'POST',
           data: { code },
           header: { 'Content-Type': 'application/json' },
           timeout: 15000,
         })
-        if (res.statusCode === 200 && res.data?.bound && res.data.accessToken) {
-          setToken(res.data.accessToken)
+        const outcome = normalizeLoginOutcome(res.data)
+        if (res.statusCode === 200 && outcome.bound && outcome.accessToken) {
+          setToken(outcome.accessToken)
           return true
         }
         return false

@@ -1,10 +1,4 @@
-export function formatMoney(n: number | null | undefined): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—'
-  return n.toLocaleString('zh-CN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })
-}
+
 
 export function formatRoiRatio(ratio: number | null | undefined): string {
   if (ratio === null || ratio === undefined || Number.isNaN(ratio)) return '—'

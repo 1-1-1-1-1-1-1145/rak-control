@@ -1,5 +1,108 @@
 /* 首页驾驶舱专属样式（hero 通用类已上收 ui.scss） */
 
 .home-empty-clickable {
-  padding: 8rpx 0;
+  padding: 16rpx 0;
+}
+
+.home-dashboard {
+  --home-grid-gap: 28rpx;
+  gap: 32rpx;
+}
+
+.home-dashboard .hero-block__desc {
+  font-size: 28rpx;
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+.home-dashboard .home-hero-metrics {
+  margin-top: 16rpx;
+  gap: 16rpx;
+}
+
+.home-dashboard .home-hero-ratio {
+  font-size: 32rpx;
+}
+
+.home-dashboard .tile-grid {
+  gap: var(--home-grid-gap);
+}
+
+.home-dashboard .tile {
+  width: calc((100% - var(--home-grid-gap)) / 2);
+  padding: 32rpx;
+}
+
+.home-dashboard .tile__desc {
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 1.55;
+  opacity: 0.9;
+}
+
+.home-dashboard .section-label {
+  color: var(--color-foreground);
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-bottom: 20rpx;
+}
+
+.home-dashboard .home-section-action {
+  font-size: 26rpx;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.home-dashboard .home-empty-copy {
+  color: var(--color-foreground);
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.65;
+  opacity: 0.86;
+}
+
+.home-dashboard .home-announcement {
+  align-items: flex-start;
+  min-height: 128rpx;
+  padding: 24rpx 0;
+}
+
+.home-dashboard .home-announcement__content {
+  min-width: 0;
+  padding-right: 20rpx;
+}
+
+.home-dashboard .home-announcement__title,
+.home-dashboard .home-announcement__meta {
+  display: block;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.home-dashboard .home-announcement__title {
+  line-height: 1.45;
+}
+
+.home-dashboard .home-announcement__meta {
+  color: var(--color-foreground);
+  font-size: 26rpx;
+  line-height: 1.55;
+  margin-top: 8rpx;
+  opacity: 0.84;
+}
+
+.home-dashboard .home-announcement__arrow {
+  color: var(--color-foreground);
+  flex-shrink: 0;
+  font-size: 32rpx;
+  line-height: 1.2;
+  opacity: 0.72;
+}
+
+.home-dashboard .hero-block .bar-chart__label {
+  color: inherit;
+  font-size: 24rpx;
+  font-weight: 600;
+  opacity: 1;
 }

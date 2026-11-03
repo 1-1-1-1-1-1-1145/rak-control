@@ -5,8 +5,7 @@ import { useState } from 'react'
 import PageShell from '@/components/page-shell'
 import { Card } from '@/components/ui'
 import { ListState } from '@/components/states'
-import { teamStore } from '@/store'
-import * as clubService from '@/services/club'
+import { authStore, teamStore } from '@/store'
 import { toast } from '@/utils/toast'
 import { ApiError } from '@/utils/request'
 import { formatDate } from '@/utils/format'
@@ -38,14 +37,24 @@ function AdminAnnouncements() {
     }
     setBusy(true)
     try {
+      // 捕获发起时的团队：cloud 下写入归属该队，切队后不得在别的队继续
+      const capturedClubId = authStore.cloudActiveTeam?.clubId ?? null
       let id = editingId
       if (id) {
-        await clubService.updateAnnouncement(id, { title: title.trim(), body, pinned })
+        await teamStore.updateAnnouncement(id, { title: title.trim(), body, pinned })
       } else {
-        const created = await clubService.createAnnouncement({ title: title.trim(), body, pinned })
+        const created = await teamStore.createAnnouncement({ title: title.trim(), body, pinned })
         id = created.id
       }
-      if (publish) await clubService.publishAnnouncement(id)
+      if (publish) {
+        // 二次校验原 ctx：A 队创建后若已切到 B，不在 B 继续发布
+        if (authStore.isCloud && authStore.cloudActiveTeam?.clubId !== capturedClubId) {
+          toast('团队已切换，草稿已保存在原团队')
+          setBusy(false)
+          return
+        }
+        await teamStore.publishAnnouncement(id as string)
+      }
       toast(publish ? '已发布' : '草稿已保存', 'success')
       setTitle('')
       setBody('')
@@ -63,7 +72,7 @@ function AdminAnnouncements() {
     const r = await Taro.showModal({ title: '归档公告', content: '归档后成员不可见' })
     if (!r.confirm) return
     try {
-      await clubService.archiveAnnouncement(id)
+      await teamStore.archiveAnnouncement(id)
       await reload()
     } catch (e) {
       toast(e instanceof ApiError ? e.userMessage : '归档失败')
@@ -167,7 +176,11 @@ function AdminAnnouncements() {
                     <Text
                       className='text-caption text-success'
                       onClick={async () => {
-                        await clubService.publishAnnouncement(a.id)
+                        try {
+                          await teamStore.publishAnnouncement(a.id)
+                        } catch (e) {
+                          toast(e instanceof ApiError ? e.userMessage : '发布失败')
+                        }
                         await reload()
                       }}
                     >

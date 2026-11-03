@@ -68,6 +68,8 @@ export interface ClubMember {
   status: 'ACTIVE' | 'LEFT' | 'DISABLED'
   joinedAt: string
   updatedAt: string
+  /** cloud：成员记录版本，供写操作带 expectedRevision（legacy 无此字段） */
+  revision?: number
 }
 
 /** ===== 任务池（API.md §7.1/§7.2） ===== */
@@ -89,11 +91,12 @@ export type TaskCategory =
 
 export type QualityGrade = 'A' | 'B' | 'C' | 'D'
 
-export const QUALITY_SCORE: Record<QualityGrade, number> = {
-  A: 90,
-  B: 75,
-  C: 60,
-  D: 40,
+/** 演示模式下保存在本机的交付附件；Rak API 当前没有附件字段。 */
+export interface TaskSubmissionAttachment {
+  id: string
+  name: string
+  size: number
+  localPath: string
 }
 
 export interface Task {
@@ -110,15 +113,20 @@ export interface Task {
   claimedAt: string | null
   submittedAt: string | null
   submitNote: string | null
+  submissionAttachments?: TaskSubmissionAttachment[]
   approvedAt: string | null
   qualityGrade: QualityGrade | null
   qualityNote: string | null
   rejectedAt: string | null
   rejectReason: string | null
+  /** 最新一轮验收人展示名（云端详情提供；演示/legacy 可能为空）。 */
+  reviewedByName?: string | null
   createdBy: string
   createdByName: string | null
   createdAt: string
   updatedAt: string
+  /** 云端任务乐观并发版本；legacy 后端可能不提供。 */
+  revision?: number
 }
 
 export interface TaskQuery {
@@ -203,6 +211,8 @@ export interface Announcement {
   publishedAt: string | null
   createdAt: string
   updatedAt: string
+  /** cloud：公告记录版本，供写操作带 expectedRevision（legacy 无此字段） */
+  revision?: number
 }
 
 /** ===== 邀请码（API.md §7.6） ===== */

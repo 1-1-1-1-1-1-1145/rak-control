@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "types": ["node"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": ".",
+    "outDir": "build",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": [
+    "contracts/**/*.ts",
+    "shared/**/*.ts",
+    "repositories/**/*.ts",
+    "modules/**/*.ts",
+    "storage/**/*.ts",
+    "jobs/**/*.ts",
+    "entrypoints/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", "build"]
+}

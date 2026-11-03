@@ -3,6 +3,9 @@ deploy_versions/
 .temp/
 .rn_temp/
 node_modules/
+# build:cloud 生成的云函数部署产物（自包含目录）
+cloudfunctions/
+server/build/
 .DS_Store
 .swc
 *.local
@@ -12,6 +15,18 @@ node_modules/
 .turbo/
 .eslintcache
 coverage/
+
+# 本机 CloudBase 部署配置（含函数环境变量；RAK_JOIN_SECRET 属密钥，不提交）
+cloudbaserc.json
+
+# 本机环境与微信开发者工具私有配置
+.env
+.env.*
+!.env.example
+project.private.config.json
+
+# 临时解包/预览资料
+temp_*/
 
 # 系统
 Thumbs.db

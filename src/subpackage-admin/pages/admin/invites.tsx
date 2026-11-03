@@ -9,6 +9,7 @@ import { teamStore } from '@/store'
 import { fetchInviteQrDataUrl } from '@/services/club'
 import { toast } from '@/utils/toast'
 import { formatDate } from '@/utils/format'
+import { DEMO_MODE } from '@/constants'
 import type { InviteCode } from '@/types/domain'
 import '../../admin.scss'
 
@@ -71,9 +72,15 @@ function AdminInvites() {
   return (
     <PageShell kicker='INVITES' headTitle='邀请码' showBack requireRole='manage'>
       <View className='stack-gap fade-in'>
-        <View className={`btn-primary pressable ${busy ? 'btn-primary--disabled' : ''}`} onClick={busy ? undefined : create}>
-          <Text>生成新邀请码（30 天 · 10 次）</Text>
-        </View>
+        {DEMO_MODE ? (
+          <Card>
+            <Text className='text-caption'>邀请码与小程序码由 Rak 服务端签发，本地演示不创建真实凭证。</Text>
+          </Card>
+        ) : (
+          <View className={`btn-primary pressable ${busy ? 'btn-primary--disabled' : ''}`} onClick={busy ? undefined : create}>
+            <Text>生成新邀请码（30 天 · 10 次）</Text>
+          </View>
+        )}
 
         <ListState
           loading={loading && teamStore.invites.length === 0}
@@ -81,7 +88,7 @@ function AdminInvites() {
           empty={teamStore.invites.length === 0}
           onRetry={reload}
           emptyTitle='还没有邀请码'
-          emptyHint='生成后分享给新成员，或制成小程序码海报'
+          emptyHint={DEMO_MODE ? '连接 Rak 服务端后可生成和管理邀请码' : '生成后分享给新成员，或制成小程序码海报'}
         >
           <Card>
             {teamStore.invites.map((i) => (

@@ -27,3 +27,7 @@ declare namespace NodeJS {
 }
 
 
+declare const __RAK_DEMO_MODE__: boolean
+declare const __RAK_API_BASE__: string
+declare const __RAK_BACKEND__: 'demo' | 'cloud' | 'http'
+declare const __RAK_CLOUD_ENV__: string

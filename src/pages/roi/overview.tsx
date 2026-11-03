@@ -23,7 +23,8 @@ function RoiOverviewPage() {
 
   useDidShow(() => {
     if (authStore.status === 'LOADING') return
-    if (!authStore.isLoggedIn) {
+    // cloud：未就绪时交由 PageShell 统一守卫决定落点（选队/账户页），不在此跳登录
+    if (!authStore.isCloud && !authStore.isLoggedIn) {
       Taro.reLaunch({ url: ROUTES.login })
       return
     }
