@@ -111,14 +111,19 @@ export class TeamSessionStore {
    * 本队资料变更（仅姓名/职务）：**就地**更新并同步 revision，不改变团队 epoch。
    * 角色/成员状态变更不在此处理（那会使当前权限上下文失效）。
    */
-  applyProfile(patch: { displayName?: string; duty?: string | null; revision: number }): void {
-    if (!this.active) return
+  applyProfile(
+    ctx: TeamContext,
+    patch: { displayName?: string; duty?: string | null; revision: number }
+  ): boolean {
+    const active = this.active
+    if (!active || !this.isCurrent(ctx)) return false
     this.active = {
-      ...this.active,
-      displayName: patch.displayName ?? this.active.displayName,
-      duty: patch.duty === undefined ? this.active.duty : patch.duty,
+      ...active,
+      displayName: patch.displayName ?? active.displayName,
+      duty: patch.duty === undefined ? active.duty : patch.duty,
       membershipRevision: patch.revision,
     }
+    return true
   }
 
   /** 捕获就绪的团队上下文（未 READY 即抛错）。 */

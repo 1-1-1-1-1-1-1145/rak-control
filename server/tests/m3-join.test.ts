@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { COLLECTIONS } from '../repositories/collections.ts'
+import { identityId } from '../repositories/ids.ts'
 import { bootstrap } from '../modules/auth/index.ts'
 import { resolveJoinTarget, rotateJoinLink, submit, status } from '../modules/join/index.ts'
 import { JOIN_TARGET_TTL_MS } from '../shared/join-token.ts'
@@ -137,4 +138,44 @@ test('join.submit：过期 token 拒绝；已 ACTIVE 返回 ALREADY_MEMBER', asy
     mutationId: ids('a1'),
   })
   assert.equal(already.status, 'ALREADY_MEMBER')
+})
+
+test('join：BLOCKED 账户与已解散团队不能继续解析或提交申请', async () => {
+  const seed = await seedTeam()
+  const ids = labelIds(seed.clock)
+  const deps = joinDeps(seed)
+  const rotate = await rotateJoinLink(deps, seed.ownerIdentity, seed.clubId, { mutationId: ids('r1') })
+  const applicantIdentity = await applicant(seed, 'blocked-join-applicant')
+  const identity = await seed.db.read(COLLECTIONS.identities, identityId(APP_ID, 'blocked-join-applicant'))
+  const userId = identity?.userId as string
+  const target = await resolveJoinTarget(deps, applicantIdentity, rotate.plaintextKey as string)
+
+  await seed.db.tx(async (tx) => {
+    const user = await tx.get(COLLECTIONS.users, userId)
+    if (!user) throw new Error('夹具：用户缺失')
+    await tx.set(COLLECTIONS.users, { ...user, securityState: 'BLOCKED' })
+  })
+  await assert.rejects(
+    () => resolveJoinTarget(deps, applicantIdentity, rotate.plaintextKey as string),
+    (e: unknown) => (e as { code?: string }).code === 'account_blocked'
+  )
+
+  await seed.db.tx(async (tx) => {
+    const user = await tx.get(COLLECTIONS.users, userId)
+    const club = await tx.get(COLLECTIONS.clubs, seed.clubId)
+    if (!user || !club) throw new Error('夹具：文档缺失')
+    await tx.set(COLLECTIONS.users, { ...user, securityState: 'NORMAL' })
+    await tx.set(COLLECTIONS.clubs, { ...club, status: 'DISSOLVED' })
+  })
+  await assert.rejects(
+    () =>
+      submit(deps, applicantIdentity, {
+        joinTargetToken: target.joinTargetToken,
+        name: '申请人',
+        wechat: 'wechat',
+        reason: '申请加入',
+        mutationId: ids('dissolved-submit'),
+      }),
+    (e: unknown) => (e as { code?: string }).code === 'resource_not_found'
+  )
 })

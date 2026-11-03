@@ -21,10 +21,16 @@ export function requireOwner(ctx: TenantContext): void {
 /** manager 只能管理普通 member；owner 可管理 manager/member；任何接口不能处置 owner。 */
 export function requireCanManageTarget(
   ctx: TenantContext,
-  target: { role: ClubRole; isOwner: boolean }
+  target: { role: ClubRole; isOwner: boolean },
+  actorIsPrimaryOwner: boolean
 ): void {
   if (target.isOwner) throw new AppError('permission_denied', '不能通过业务接口修改 owner')
-  if (isOwner(ctx.role)) return
+  // 普通 super_admin 可管理 manager/member，但只有首位 owner 可管理其他 super_admin。
+  if (target.role === 'super_admin' && !actorIsPrimaryOwner) {
+    throw new AppError('permission_denied', '仅首位超级管理员可管理其他超级管理员')
+  }
+  if (actorIsPrimaryOwner) return
+  if (ctx.role === 'super_admin') return
   if (ctx.role === 'manager' && target.role === 'member') return
   throw new AppError('permission_denied')
 }

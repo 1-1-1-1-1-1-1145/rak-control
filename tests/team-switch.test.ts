@@ -264,7 +264,7 @@ test('本队资料就地更新：改姓名/职务不动团队 epoch 与角色', 
   const { session } = readySession('clubA')
   const before = session.captureReadyContext()
 
-  session.applyProfile({ displayName: '新名字', duty: '部长', revision: 2 })
+  assert.equal(session.applyProfile(before, { displayName: '新名字', duty: '部长', revision: 2 }), true)
   const after = session.captureReadyContext()
   assert.equal(after.epoch, before.epoch)
   assert.equal(after.memberId, before.memberId)
@@ -274,10 +274,16 @@ test('本队资料就地更新：改姓名/职务不动团队 epoch 与角色', 
   assert.equal(session.active?.role, 'member')
 
   // 未提供 duty 时保持原值（不把"未修改"写成 null）
-  session.applyProfile({ displayName: '又改名', revision: 3 })
+  assert.equal(session.applyProfile(before, { displayName: '又改名', revision: 3 }), true)
   assert.equal(session.active?.displayName, '又改名')
   assert.equal(session.active?.duty, '部长')
   assert.equal(session.active?.membershipRevision, 3)
+
+  assert.equal(
+    session.applyProfile({ ...before, clubId: 'clubB' }, { displayName: '另一队旧响应', revision: 4 }),
+    false
+  )
+  assert.equal(session.active?.displayName, '又改名')
 })
 
 test('协调器：账户未识别时拒绝切队（不伪造进入）', async () => {

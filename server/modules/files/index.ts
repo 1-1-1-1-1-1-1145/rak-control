@@ -9,7 +9,7 @@ import { identityId, randomId, sha256Hex } from '../../repositories/ids.ts'
 import { writeAudit } from '../../shared/audit.ts'
 import { assertTrustedIdentity, type TrustedIdentity } from '../../shared/identity.ts'
 import { resolveTenant } from '../context.ts'
-import { runIdempotent } from '../command.ts'
+import { getIdempotentReplay, runIdempotent } from '../command.ts'
 import type { StorageAdapter } from '../../storage/adapter.ts'
 
 /**
@@ -404,7 +404,21 @@ export async function putChunk(
     const existingChunk = await tx.get(COLLECTIONS.uploadChunks, chunkId)
     if (existingChunk) {
       if (existingChunk.sha256 !== sha256) throw new AppError('idempotency_conflict', '同一分片序号内容不一致')
-      return { chunkId, sha256, replayed: true }
+      if (existingChunk.state === 'STORED' && typeof existingChunk.fileID === 'string') {
+        return { chunkId, sha256, replayed: true }
+      }
+      if (existingChunk.state === 'GC_PENDING') throw new AppError('upload_cancelled')
+      if (existingChunk.state !== 'PENDING') {
+        throw new AppError('attachment_not_ready', '分片状态不可重试')
+      }
+      // 上一次上传可能在 SDK 返回后、回写 STORED 前失联。相同内容重试使用同一对象路径；
+      // PENDING 不能当作成功回放，否则 confirm 会永远缺少对象。
+      await tx.set(COLLECTIONS.uploadChunks, {
+        ...existingChunk,
+        attempt: ((existingChunk.attempt as number) ?? 1) + 1,
+        updatedAt: now,
+      })
+      return { chunkId, sha256, replayed: false }
     }
     if (session.state === 'DRAFT') {
       await tx.set(COLLECTIONS.uploadSessions, { ...session, state: 'UPLOADING', updatedAt: now })
@@ -473,6 +487,22 @@ export async function fileConfirm(
   input: { sessionId: string; mutationId: string }
 ): Promise<AttachmentView> {
   const now = deps.now()
+  const commandInput = {
+    scope: { kind: 'TEAM' as const, clubId },
+    actorIdentityId: actorIdentityId(trusted),
+    action: 'file.confirm',
+    mutationId: input.mutationId,
+    data: { sessionId: input.sessionId },
+  }
+
+  // 成功结果丢响应时，先返回既有命令结果，不重新读字节或上传最终对象。
+  const replay = await getIdempotentReplay<AttachmentView>(deps.db, now, commandInput)
+  if (replay) return replay
+
+  // 同一命令重试必须命中同一最终对象路径，避免上传成功但事务提交失败后产生新孤儿对象。
+  const attachmentId = sha256Hex(
+    JSON.stringify(['rak-attachment-v1', clubId, input.sessionId, input.mutationId])
+  )
 
   // 阶段 1：读取并校验会话与分片完备性（事务内只做 doc 读取）
   const prepared = await deps.db.tx(async (tx) => {
@@ -512,20 +542,13 @@ export async function fileConfirm(
   const sha256 = sha256Bytes(assembled)
 
   // 阶段 3：事务外发布最终对象（服务端唯一路径；发布前已完成校验）
-  const attachmentId = randomId('att')
   const ref = await deps.storage.uploadObject(finalObjectPath(clubId, input.sessionId, attachmentId), assembled)
 
   // 阶段 4：事务内落库（含命令幂等）
   const run = await runIdempotent(
     deps.db,
     now,
-    {
-      scope: { kind: 'TEAM', clubId },
-      actorIdentityId: actorIdentityId(trusted),
-      action: 'file.confirm',
-      mutationId: input.mutationId,
-      data: { sessionId: input.sessionId },
-    },
+    commandInput,
     async (tx) => {
       const { tenant, session } = await loadSession(tx, trusted, clubId, input.sessionId)
       // 取消/过期竞态：确认时再查一次

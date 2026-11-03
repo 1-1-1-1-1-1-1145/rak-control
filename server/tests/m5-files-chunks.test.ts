@@ -23,6 +23,8 @@ class FakeStorageAdapter implements StorageAdapter {
   private objects = new Map<string, Uint8Array>()
   private byFileID = new Map<string, string>()
   deleted: string[] = []
+  uploads: string[] = []
+  uploadFailures = 0
   /** >0 时读回字节被篡改，用于验证组装校验确实生效。 */
   tamper = 0
 
@@ -38,7 +40,12 @@ class FakeStorageAdapter implements StorageAdapter {
   requireAdjudicated(): void {}
 
   async uploadObject(objectPath: string, bytes: Uint8Array): Promise<StorageObjectRef> {
+    if (this.uploadFailures > 0) {
+      this.uploadFailures -= 1
+      throw new AppError('storage_unavailable', '替身层：一次上传失败')
+    }
     this.objects.set(objectPath, new Uint8Array(bytes))
+    this.uploads.push(objectPath)
     const fileID = this.fileIdForPath(objectPath)
     this.byFileID.set(fileID, objectPath)
     return { fileID }
@@ -94,7 +101,7 @@ async function makeHarness(): Promise<Harness> {
   const created = await tasks.createTask(tasksDeps, seed.ownerIdentity, seed.clubId, {
     title: '拍摄任务',
     description: '交原片',
-    category: 'photo',
+      category: 'content',
     mutationId: nextMutationId(),
   })
   const claimed = await tasks.claimTask(tasksDeps, seed.ownerIdentity, seed.clubId, {
@@ -284,6 +291,26 @@ test('分片：末片定长校验、序号越界拒绝、>256KiB 拒绝、同 in
   )
 })
 
+test('分片：首次上传失败后同内容重试，不得把 PENDING 伪装成成功', async () => {
+  const h = await makeHarness()
+  const session = await initSession(h, 1000)
+  const part = fill(1000, 7)
+  h.storage.uploadFailures = 1
+
+  await assert.rejects(
+    () => files.putChunk(h.deps, h.ownerIdentity, h.clubId, { sessionId: session.sessionId, index: 0, base64: b64(part) }),
+    (e) => codeOf(e) === 'storage_unavailable'
+  )
+  const pending = (await h.db.query(COLLECTIONS.uploadChunks, (doc) => doc.sessionId === session.sessionId))[0]
+  assert.equal(pending?.state, 'PENDING')
+
+  await files.putChunk(h.deps, h.ownerIdentity, h.clubId, { sessionId: session.sessionId, index: 0, base64: b64(part) })
+  const stored = (await h.db.query(COLLECTIONS.uploadChunks, (doc) => doc.sessionId === session.sessionId))[0]
+  assert.equal(stored?.state, 'STORED')
+  assert.equal(typeof stored?.fileID, 'string')
+  assert.equal(h.storage.uploads.filter((path) => path.includes('/chunks/0000')).length, 1)
+})
+
 test('confirm：缺片显式失败；补齐后组装校验通过并发布 VERIFIED 附件（视图不含 fileID）', async () => {
   const h = await makeHarness()
   const declared = 300 * 1024
@@ -301,9 +328,10 @@ test('confirm：缺片显式失败；补齐后组装校验通过并发布 VERIFI
   )
 
   await files.putChunk(h.deps, h.ownerIdentity, h.clubId, { sessionId: session.sessionId, index: 1, base64: b64(part1) })
+  const confirmMutation = h.nextMutationId()
   const attachment = await files.fileConfirm(h.deps, h.ownerIdentity, h.clubId, {
     sessionId: session.sessionId,
-    mutationId: h.nextMutationId(),
+    mutationId: confirmMutation,
   })
   assert.equal(attachment.sha256, sha256(assembled))
   assert.equal(attachment.size, declared)
@@ -316,6 +344,14 @@ test('confirm：缺片显式失败；补齐后组装校验通过并发布 VERIFI
   assert.equal(storedSession.state, 'CONFIRMED')
   assert.equal(storedSession.attachmentId, attachment.attachmentId)
   assert.ok(h.storage.deleted.length >= 2, '确认后应尽力清理 staging 分片')
+
+  const uploadsBeforeReplay = h.storage.uploads.length
+  const replay = await files.fileConfirm(h.deps, h.ownerIdentity, h.clubId, {
+    sessionId: session.sessionId,
+    mutationId: confirmMutation,
+  })
+  assert.deepEqual(replay, attachment)
+  assert.equal(h.storage.uploads.length, uploadsBeforeReplay, '确认丢响应后的重试不得重复上传最终对象')
 })
 
 test('confirm：读回字节被篡改时拒绝发布（组装校验生效）', async () => {

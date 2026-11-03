@@ -12,9 +12,10 @@ import {
 import type { JoinMineItem, JoinRequestPage, JoinRequestView, JoinTargetView, Page } from '../../contracts/dtos.ts'
 import { requireManagerPlus } from '../../shared/authorization.ts'
 import { writeAudit } from '../../shared/audit.ts'
-import { assertMutationFresh } from '../../shared/command.ts'
+import { assertMutationFresh, IDEMPOTENCY_RETAIN_MS, RESULT_WINDOW_MS } from '../../shared/command.ts'
 import { decodeCursor, encodeCursor } from '../../shared/cursor.ts'
 import { JOIN_TARGET_TTL_MS, maskCode, signJoinTarget, verifyJoinTarget } from '../../shared/join-token.ts'
+import { normalizeSingleLine } from '../../shared/text.ts'
 import { runIdempotent } from '../command.ts'
 import { resolveTenant, toTenantContext } from '../context.ts'
 
@@ -57,6 +58,9 @@ export async function rotateJoinLink(
   assertMutationFresh(input.mutationId, now)
 
   return deps.db.tx(async (tx) => {
+    const tenant = await resolveTenant(tx, trusted, clubId)
+    requireManagerPlus(toTenantContext(trusted, tenant))
+
     const existing = await tx.get(COLLECTIONS.commands, commandDocId)
     if (existing) {
       if (existing.inputHash !== inputHash) throw new AppError('idempotency_conflict')
@@ -64,9 +68,6 @@ export async function rotateJoinLink(
       // 明文只在生成当次返回；重放不返回明文
       return { ...summary, plaintextKey: null, replayed: true }
     }
-
-    const tenant = await resolveTenant(tx, trusted, clubId)
-    requireManagerPlus(toTenantContext(trusted, tenant))
 
     const state = await tx.get(COLLECTIONS.joinEntryStates, clubId)
     const entryVersion = state ? ((state.entryVersion as number) ?? 0) + 1 : 1
@@ -115,6 +116,8 @@ export async function rotateJoinLink(
       _id: commandDocId,
       scope: `TEAM:${clubId}`,
       actorIdentityId: identityId(trusted.appId, trusted.openid),
+      actorRole: tenant.member.role as string,
+      actorIsPrimaryOwner: tenant.club.ownerMemberId === tenant.member._id,
       action: 'team.joinLink.rotate',
       inputHash,
       status: 'SUCCEEDED',
@@ -122,6 +125,8 @@ export async function rotateJoinLink(
       resultSummary: JSON.stringify({ entryId, maskedCode }),
       createdAt: now,
       completedAt: now,
+      resultUntil: now + RESULT_WINDOW_MS,
+      retainUntil: now + IDEMPOTENCY_RETAIN_MS,
     })
     return { entryId, maskedCode, plaintextKey: key, replayed: false }
   })
@@ -146,10 +151,13 @@ export async function resolveJoinTarget(
     throw new AppError('resource_not_found', '申请入口已轮换')
   }
   const club = await deps.db.read(COLLECTIONS.clubs, clubId)
-  if (!club) throw new AppError('resource_not_found')
+  if (!club || club.status !== 'ACTIVE') throw new AppError('resource_not_found')
 
   const identity = await deps.db.read(COLLECTIONS.identities, identityId(trusted.appId, trusted.openid))
   if (!identity || typeof identity.userId !== 'string') throw new AppError('identity_required')
+  const user = await deps.db.read(COLLECTIONS.users, identity.userId)
+  if (!user) throw new AppError('identity_required')
+  if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
 
   const expiresAt = now + JOIN_TARGET_TTL_MS
   const joinTargetToken = signJoinTarget(
@@ -192,6 +200,9 @@ export async function submit(
     appId: trusted.appId,
     env: trusted.env,
   })
+  const name = normalizeSingleLine(input.name, { field: '申请姓名', min: 1, max: 16 })
+  const wechat = normalizeSingleLine(input.wechat, { field: '申请微信号', min: 1, max: 32 })
+  const reason = normalizeSingleLine(input.reason, { field: '申请理由', min: 1, max: 80 })
 
   const identity = await deps.db.read(COLLECTIONS.identities, identityId(trusted.appId, trusted.openid))
   if (!identity || identity.userId !== payload.accountKey) {
@@ -201,10 +212,16 @@ export async function submit(
   const clubId = payload.clubId
   const reqId = joinRequestId(clubId, userId)
   const commandDocId = sha256Hex(`cmd|GLOBAL|${userId}|join.submit|${input.mutationId}`)
-  const inputHash = sha256Hex(JSON.stringify(['join.submit', clubId, input.name, input.wechat, input.reason]))
+  const inputHash = sha256Hex(JSON.stringify(['join.submit', clubId, name, wechat, reason]))
   assertMutationFresh(input.mutationId, now)
 
   return deps.db.tx(async (tx) => {
+    const user = await tx.get(COLLECTIONS.users, userId)
+    if (!user) throw new AppError('identity_required')
+    if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
+    const club = await tx.get(COLLECTIONS.clubs, clubId)
+    if (!club || club.status !== 'ACTIVE') throw new AppError('resource_not_found', '目标团队当前不可加入')
+
     const existing = await tx.get(COLLECTIONS.commands, commandDocId)
     if (existing) {
       if (existing.inputHash !== inputHash) throw new AppError('idempotency_conflict')
@@ -218,10 +235,6 @@ export async function submit(
       throw new AppError('resource_not_found', '申请入口已轮换')
     }
 
-    const user = await tx.get(COLLECTIONS.users, userId)
-    if (!user) throw new AppError('identity_required')
-    if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
-
     const memberDoc = await tx.get(COLLECTIONS.members, sha256Hex(JSON.stringify(['rak-member-v1', clubId, userId])))
     if (memberDoc && memberDoc.status === 'ACTIVE') {
       const summary = { joinRequestId: reqId, status: 'ALREADY_MEMBER' as const }
@@ -229,12 +242,16 @@ export async function submit(
         _id: commandDocId,
         scope: 'GLOBAL',
         actorIdentityId: identityId(trusted.appId, trusted.openid),
+        actorRole: null,
+        actorIsPrimaryOwner: false,
         action: 'join.submit',
         inputHash,
         status: 'SUCCEEDED',
         resultSummary: JSON.stringify(summary),
         createdAt: now,
         completedAt: now,
+        resultUntil: now + RESULT_WINDOW_MS,
+        retainUntil: now + IDEMPOTENCY_RETAIN_MS,
       })
       return { ...summary, replayed: false }
     }
@@ -245,9 +262,9 @@ export async function submit(
       _id: reqId,
       clubId,
       userId,
-      name: input.name,
-      wechat: input.wechat,
-      reason: input.reason,
+      name,
+      wechat,
+      reason,
       status: 'PENDING',
       attemptNo,
       resolution: null,
@@ -265,14 +282,11 @@ export async function submit(
       mutationSeq: ((state.mutationSeq as number) ?? 0) + 1,
       updatedAt: now,
     })
-    const club = await tx.get(COLLECTIONS.clubs, clubId)
-    if (club) {
-      await tx.set(COLLECTIONS.clubs, {
-        ...club,
-        mutationSeq: ((club.mutationSeq as number) ?? 0) + 1,
-        updatedAt: now,
-      })
-    }
+    await tx.set(COLLECTIONS.clubs, {
+      ...club,
+      mutationSeq: ((club.mutationSeq as number) ?? 0) + 1,
+      updatedAt: now,
+    })
 
     await writeAudit(tx, {
       scope: 'GLOBAL',
@@ -289,12 +303,16 @@ export async function submit(
       _id: commandDocId,
       scope: 'GLOBAL',
       actorIdentityId: identityId(trusted.appId, trusted.openid),
+      actorRole: null,
+      actorIsPrimaryOwner: false,
       action: 'join.submit',
       inputHash,
       status: 'SUCCEEDED',
       resultSummary: JSON.stringify(summary),
       createdAt: now,
       completedAt: now,
+      resultUntil: now + RESULT_WINDOW_MS,
+      retainUntil: now + IDEMPOTENCY_RETAIN_MS,
     })
     return { ...summary, replayed: false }
   })
@@ -323,6 +341,9 @@ export async function listMine(
   const identity = await deps.db.read(COLLECTIONS.identities, identityId(trusted.appId, trusted.openid))
   if (!identity || typeof identity.userId !== 'string') throw new AppError('identity_required')
   const userId = identity.userId
+  const user = await deps.db.read(COLLECTIONS.users, userId)
+  if (!user) throw new AppError('identity_required')
+  if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
 
   const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50)
   const fingerprint = 'join.mine:self'
@@ -378,6 +399,9 @@ export async function status(
 ): Promise<JoinStatusView> {
   const identity = await deps.db.read(COLLECTIONS.identities, identityId(trusted.appId, trusted.openid))
   if (!identity || typeof identity.userId !== 'string') throw new AppError('identity_required')
+  const user = await deps.db.read(COLLECTIONS.users, identity.userId)
+  if (!user) throw new AppError('identity_required')
+  if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
   const doc = await deps.db.read(COLLECTIONS.joinRequests, joinRequestIdValue)
   if (!doc || doc.userId !== identity.userId) throw new AppError('resource_not_found')
   return {
@@ -592,9 +616,11 @@ export async function rejectJoinRequest(
   input: { joinRequestId: string; rejectReason: string; mutationId: string }
 ): Promise<RejectJoinResult> {
   const now = deps.now()
-  if (!input.rejectReason || input.rejectReason.trim().length === 0) {
-    throw new AppError('validation_failed', '驳回原因必填')
-  }
+  const rejectReason = normalizeSingleLine(input.rejectReason, {
+    field: '驳回原因',
+    min: 1,
+    max: 200,
+  })
   const run = await runIdempotent(
     deps.db,
     now,
@@ -603,7 +629,7 @@ export async function rejectJoinRequest(
       actorIdentityId: identityId(trusted.appId, trusted.openid),
       action: 'join.reject',
       mutationId: input.mutationId,
-      data: { joinRequestId: input.joinRequestId, rejectReason: input.rejectReason },
+      data: { joinRequestId: input.joinRequestId, rejectReason },
     },
     async (tx) => {
       const tenant = await resolveTenant(tx, trusted, clubId)
@@ -616,7 +642,7 @@ export async function rejectJoinRequest(
       await tx.set(COLLECTIONS.joinRequests, {
         ...req,
         status: 'REJECTED',
-        resolution: input.rejectReason,
+        resolution: rejectReason,
         reviewedByMemberId: tenant.member._id,
         reviewedAt: now,
         revision: ((req.revision as number) ?? 0) + 1,

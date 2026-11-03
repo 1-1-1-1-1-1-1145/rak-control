@@ -75,7 +75,7 @@ async function makeHarness(): Promise<Harness> {
   const created = await tasks.createTask(taskDeps, seed.ownerIdentity, seed.clubId, {
     title: '交片',
     description: '交原片',
-    category: 'photo',
+      category: 'content',
     mutationId: nextMutationId(),
   })
   const claimed = await tasks.claimTask(taskDeps, seed.ownerIdentity, seed.clubId, {
@@ -211,6 +211,15 @@ test('拒绝：附件已过期 → upload_expired', async () => {
   const att = await upload(h)
   h.clock.advance(25 * 60 * 60 * 1000)
   assert.equal(codeOf(await submit(h, [att]).catch((e) => e)), 'upload_expired')
+})
+
+test('拒绝：附件安全扫描状态未知或被阻断', async () => {
+  const h = await makeHarness()
+  const att = await upload(h)
+  await mutate(h, COLLECTIONS.attachments, att, { scanState: 'BLOCKED' })
+  assert.equal(codeOf(await submit(h, [att]).catch((e) => e)), 'attachment_not_ready')
+  await mutate(h, COLLECTIONS.attachments, att, { scanState: 'UNKNOWN' })
+  assert.equal(codeOf(await submit(h, [att]).catch((e) => e)), 'attachment_not_ready')
 })
 
 test('拒绝：会话不在本轮批次 → attachment_forbidden', async () => {

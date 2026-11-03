@@ -436,8 +436,8 @@ class AuthStore {
   clear() {
     if (this.isCloud) {
       // 账户失效/换微信：清账户与团队两层 + 业务 Store；旧账号的未决命令指针不得带入新账号
-      cloudResetSessions()
       cloudForgetSelectedClubId()
+      cloudResetSessions()
       resetBusinessStores()
       clearPendingCommands()
       resetDeepLinkEntry()

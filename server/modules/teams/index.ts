@@ -42,6 +42,9 @@ export async function listMine(
   const identity = await deps.db.read(COLLECTIONS.identities, identityId(trusted.appId, trusted.openid))
   if (!identity || typeof identity.userId !== 'string') throw new AppError('identity_required')
   const userId = identity.userId
+  const user = await deps.db.read(COLLECTIONS.users, userId)
+  if (!user) throw new AppError('identity_required')
+  if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
 
   const pageSize = clampPage(opts.pageSize)
   const fingerprint = 'team.listMine'

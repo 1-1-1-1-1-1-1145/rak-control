@@ -213,7 +213,7 @@ export async function setStatus(
       requireCanManageTarget(ctx, {
         role: target.role as ClubRole,
         isOwner: tenant.club.ownerMemberId === target._id,
-      })
+      }, tenant.club.ownerMemberId === tenant.member._id)
       if (input.targetStatus !== 'ACTIVE' && input.targetStatus !== 'DISABLED') {
         throw new AppError('validation_failed', 'targetStatus 只能是 ACTIVE 或 DISABLED')
       }
@@ -314,7 +314,7 @@ export async function updateProfile(
       requireCanManageTarget(ctx, {
         role: target.role as ClubRole,
         isOwner: tenant.club.ownerMemberId === target._id,
-      })
+      }, tenant.club.ownerMemberId === tenant.member._id)
       if ((target.revision as number) !== input.expectedRevision) throw new AppError('revision_conflict')
       const patch: Record<string, unknown> = {}
       if (input.displayName !== undefined) patch.displayName = input.displayName

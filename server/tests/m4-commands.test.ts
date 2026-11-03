@@ -3,8 +3,9 @@ import test from 'node:test'
 
 import { commandStatus } from '../modules/tasks/index.ts'
 import { createTask } from '../modules/tasks/index.ts'
+import { setRole } from '../modules/members/index.ts'
 import { memberId } from '../repositories/ids.ts'
-import { labelIds, seedTeam, uuidV7From } from './helpers.ts'
+import { addMemberWithIdentity, labelIds, mutationFactory, seedTeam, uuidV7From } from './helpers.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -44,6 +45,67 @@ test('command.status：查不到为 ABSENT_IN_WINDOW；超 7 天为 EXPIRED', as
     mutationId: uuidV7From(seed.clock.now() - 8 * DAY, 9),
   })
   assert.equal(expired.status, 'EXPIRED')
+})
+
+test('command.status：结果窗口过期后不再返回完整响应', async () => {
+  const seed = await seedTeam()
+  const ids = labelIds(seed.clock)
+  const deps = { db: seed.db, now: seed.clock.now }
+  const mutationId = ids('retained')
+
+  await createTask(deps, seed.ownerIdentity, seed.clubId, {
+    title: 'T',
+    description: 'D',
+    category: 'content',
+    mutationId,
+  })
+  seed.clock.advance(8 * DAY)
+  const status = await commandStatus(deps, seed.ownerIdentity, { kind: 'TEAM', clubId: seed.clubId }, {
+    action: 'task.create',
+    mutationId,
+  })
+  assert.equal(status.status, 'EXPIRED')
+  assert.equal(status.resultSummary, null)
+})
+
+test('命令重放：成员被降权后不得继续读取旧管理结果', async () => {
+  const seed = await seedTeam()
+  const manager = await addMemberWithIdentity(seed.db, seed.clubId, 'manager-openid', '经理', 'manager')
+  const nextMutationId = mutationFactory(seed.clock)
+  const deps = { db: seed.db, now: seed.clock.now }
+  const mutationId = nextMutationId()
+
+  await createTask(deps, manager.identity, seed.clubId, {
+    title: 'T',
+    description: 'D',
+    category: 'content',
+    mutationId,
+  })
+  await setRole(deps, seed.ownerIdentity, seed.clubId, {
+    targetMemberId: manager.memberId,
+    targetRole: 'member',
+    expectedRevision: 1,
+    mutationId: nextMutationId(),
+  })
+
+  await assert.rejects(
+    () =>
+      createTask(deps, manager.identity, seed.clubId, {
+        title: 'T',
+        description: 'D',
+        category: 'content',
+        mutationId,
+      }),
+    (e: unknown) => (e as { code?: string }).code === 'permission_denied'
+  )
+  await assert.rejects(
+    () =>
+      commandStatus(deps, manager.identity, { kind: 'TEAM', clubId: seed.clubId }, {
+        action: 'task.create',
+        mutationId,
+      }),
+    (e: unknown) => (e as { code?: string }).code === 'permission_denied'
+  )
 })
 
 test('command.status：同 mutationId 两队互不泄露', async () => {

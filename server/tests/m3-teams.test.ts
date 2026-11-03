@@ -102,3 +102,16 @@ test('team.enter：非成员 / 停用 / 维护分别拒绝', async () => {
     (e: unknown) => (e as { code?: string }).code === 'team_maintenance'
   )
 })
+
+test('team.listMine：BLOCKED 账户不得读取团队列表', async () => {
+  const seed = await seedTeam()
+  await seed.db.tx(async (tx) => {
+    const user = await tx.get(COLLECTIONS.users, seed.ownerUserId)
+    if (!user) throw new Error('夹具：用户缺失')
+    await tx.set(COLLECTIONS.users, { ...user, securityState: 'BLOCKED' })
+  })
+  await assert.rejects(
+    () => listMine(deps(seed), seed.ownerIdentity),
+    (e: unknown) => (e as { code?: string }).code === 'account_blocked'
+  )
+})

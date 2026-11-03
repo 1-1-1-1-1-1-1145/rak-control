@@ -291,41 +291,54 @@ export async function rejectDismissal(
   const now = deps.now()
   const reason = normalizeSingleLine(input.rejectReason, { field: '驳回理由', min: 1, max: 200 })
 
-  return deps.db.tx(async (tx) => {
-    const tenant = await resolveTenant(tx, trusted, clubId)
-    const ctx = toTenantContext(trusted, tenant)
-    if (ctx.role !== 'manager' && ctx.role !== 'super_admin') throw new AppError('permission_denied')
-
-    const doc = await tx.get(COLLECTIONS.memberDismissals, input.dismissalId)
-    if (!doc || doc.clubId !== clubId) throw new AppError('resource_not_found')
-    if (doc.status !== 'PENDING') throw new AppError('invalid_transition', '该申请已被处理')
-    if (input.expectedRevision !== undefined && ((doc.revision as number) ?? 0) !== input.expectedRevision) {
-      throw new AppError('revision_conflict')
-    }
-
-    const next: Doc = {
-      ...doc,
-      status: 'REJECTED',
-      rejectReason: reason,
-      decidedAt: now,
-      revision: ((doc.revision as number) ?? 1) + 1,
-      updatedAt: now,
-    }
-    await tx.set(COLLECTIONS.memberDismissals, next)
-    await bumpMutationSeq(tx, COLLECTIONS.clubs, tenant.club, now)
-    await bumpMutationSeq(tx, COLLECTIONS.members, tenant.member, now)
-    await writeAudit(tx, {
-      scope: `TEAM:${clubId}`,
-      actorMemberId: tenant.member._id,
+  const run = await runIdempotent(
+    deps.db,
+    now,
+    {
+      scope: { kind: 'TEAM', clubId },
+      actorIdentityId: identityId(trusted.appId, trusted.openid),
       action: 'member.dismissal.reject',
-      resourceType: 'member',
-      resourceId: doc.targetMemberId as string,
-      seed: input.mutationId,
-      now,
-      reason,
-    })
-    return toView(next)
-  })
+      mutationId: input.mutationId,
+      expectedRevision: input.expectedRevision,
+      data: { dismissalId: input.dismissalId, rejectReason: reason },
+    },
+    async (tx) => {
+      const tenant = await resolveTenant(tx, trusted, clubId)
+      const ctx = toTenantContext(trusted, tenant)
+      if (ctx.role !== 'manager' && ctx.role !== 'super_admin') throw new AppError('permission_denied')
+
+      const doc = await tx.get(COLLECTIONS.memberDismissals, input.dismissalId)
+      if (!doc || doc.clubId !== clubId) throw new AppError('resource_not_found')
+      if (doc.status !== 'PENDING') throw new AppError('invalid_transition', '该申请已被处理')
+      if (input.expectedRevision !== undefined && ((doc.revision as number) ?? 0) !== input.expectedRevision) {
+        throw new AppError('revision_conflict')
+      }
+
+      const next: Doc = {
+        ...doc,
+        status: 'REJECTED',
+        rejectReason: reason,
+        decidedAt: now,
+        revision: ((doc.revision as number) ?? 1) + 1,
+        updatedAt: now,
+      }
+      await tx.set(COLLECTIONS.memberDismissals, next)
+      await bumpMutationSeq(tx, COLLECTIONS.clubs, tenant.club, now)
+      await bumpMutationSeq(tx, COLLECTIONS.members, tenant.member, now)
+      await writeAudit(tx, {
+        scope: `TEAM:${clubId}`,
+        actorMemberId: tenant.member._id,
+        action: 'member.dismissal.reject',
+        resourceType: 'member',
+        resourceId: doc.targetMemberId as string,
+        seed: input.mutationId,
+        now,
+        reason,
+      })
+      return toView(next)
+    }
+  )
+  return run.result
 }
 
 /** 本队裁员申请列表（TEAM、manager+；默认 PENDING）。 */

@@ -7,6 +7,7 @@ import { requireManagerPlus } from '../../shared/authorization.ts'
 import { writeAudit } from '../../shared/audit.ts'
 import { classifyMissingCommand, mutationTimeMs, scopeCanonical } from '../../shared/command.ts'
 import { decodeCursor, encodeCursor } from '../../shared/cursor.ts'
+import { normalizeMultiLine, normalizeSingleLine } from '../../shared/text.ts'
 import { resolveTenant, toTenantContext } from '../context.ts'
 import { runIdempotent } from '../command.ts'
 import { MAX_ATTACHMENTS } from '../files/index.ts'
@@ -36,6 +37,15 @@ export type TaskStatus = 'OPEN' | 'CLAIMED' | 'SUBMITTED' | 'APPROVED' | 'REJECT
 export type SubmissionStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED'
 
 const GRADES: readonly string[] = ['A', 'B', 'C', 'D']
+const ALLOWED_SCAN_STATES: readonly string[] = ['NOT_CONFIGURED', 'PASSED', 'UNSCANNABLE']
+const TASK_CATEGORIES: readonly string[] = [
+  'cross-dashboard',
+  'content',
+  'ai-image',
+  'video-localize',
+  'infra',
+  'ops',
+]
 
 export interface TaskPublicView {
   taskId: string
@@ -183,6 +193,18 @@ export async function createTask(
   }
 ): Promise<TaskPublicView> {
   const now = deps.now()
+  const title = normalizeSingleLine(input.title, { min: 1, max: 40, field: '任务标题' })
+  const description = normalizeMultiLine(input.description, { min: 1, max: 2000, field: '任务描述' })
+  const category = normalizeSingleLine(input.category, { min: 1, max: 40, field: '任务分类' })
+  if (!TASK_CATEGORIES.includes(category)) throw new AppError('validation_failed', '任务分类非法')
+  const repo =
+    input.repo === undefined || input.repo === null
+      ? null
+      : normalizeSingleLine(input.repo, { min: 1, max: 80, field: '关联仓库' })
+  const acceptanceCriteria =
+    input.acceptanceCriteria === undefined || input.acceptanceCriteria === null
+      ? null
+      : normalizeMultiLine(input.acceptanceCriteria, { min: 0, max: 2000, field: '验收标准' })
   const run = await runIdempotent(
     deps.db,
     now,
@@ -192,11 +214,11 @@ export async function createTask(
       action: 'task.create',
       mutationId: input.mutationId,
       data: {
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        repo: input.repo ?? null,
-        acceptanceCriteria: input.acceptanceCriteria ?? null,
+        title,
+        description,
+        category,
+        repo,
+        acceptanceCriteria,
       },
     },
     async (tx) => {
@@ -206,11 +228,11 @@ export async function createTask(
       const task: Doc = {
         _id: taskId,
         clubId,
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        repo: input.repo ?? null,
-        acceptanceCriteria: input.acceptanceCriteria ?? null,
+        title,
+        description,
+        category,
+        repo,
+        acceptanceCriteria,
         status: 'OPEN',
         assigneeMemberId: null,
         claimedAt: null,
@@ -255,12 +277,38 @@ export async function updateTask(
   }
 ): Promise<TaskPublicView> {
   const now = deps.now()
+  const title =
+    input.title === undefined ? undefined : normalizeSingleLine(input.title, { min: 1, max: 40, field: '任务标题' })
+  const description =
+    input.description === undefined
+      ? undefined
+      : normalizeMultiLine(input.description, { min: 1, max: 2000, field: '任务描述' })
+  const category =
+    input.category === undefined
+      ? undefined
+      : normalizeSingleLine(input.category, { min: 1, max: 40, field: '任务分类' })
+  if (category !== undefined && !TASK_CATEGORIES.includes(category)) {
+    throw new AppError('validation_failed', '任务分类非法')
+  }
+  const repo =
+    input.repo === undefined
+      ? undefined
+      : input.repo === null
+        ? null
+        : normalizeSingleLine(input.repo, { min: 1, max: 80, field: '关联仓库' })
+  const acceptanceCriteria =
+    input.acceptanceCriteria === undefined
+      ? undefined
+      : input.acceptanceCriteria === null
+        ? null
+        : normalizeMultiLine(input.acceptanceCriteria, { min: 0, max: 2000, field: '验收标准' })
+
   const data: Record<string, unknown> = { taskId: input.taskId }
-  if (input.title !== undefined) data.title = input.title
-  if (input.description !== undefined) data.description = input.description
-  if (input.category !== undefined) data.category = input.category
-  if (input.repo !== undefined) data.repo = input.repo
-  if (input.acceptanceCriteria !== undefined) data.acceptanceCriteria = input.acceptanceCriteria
+  if (title !== undefined) data.title = title
+  if (description !== undefined) data.description = description
+  if (category !== undefined) data.category = category
+  if (repo !== undefined) data.repo = repo
+  if (acceptanceCriteria !== undefined) data.acceptanceCriteria = acceptanceCriteria
 
   const run = await runIdempotent(
     deps.db,
@@ -281,11 +329,11 @@ export async function updateTask(
       if (task.status !== 'OPEN') throw new AppError('invalid_transition', '仅 OPEN 任务可编辑')
       if ((task.revision as number) !== input.expectedRevision) throw new AppError('revision_conflict')
       const patch: Record<string, unknown> = {
-        title: input.title ?? task.title,
-        description: input.description ?? task.description,
-        category: input.category ?? task.category,
-        repo: input.repo === undefined ? task.repo : input.repo,
-        acceptanceCriteria: input.acceptanceCriteria === undefined ? task.acceptanceCriteria : input.acceptanceCriteria,
+        title: title ?? task.title,
+        description: description ?? task.description,
+        category: category ?? task.category,
+        repo: repo === undefined ? task.repo : repo,
+        acceptanceCriteria: acceptanceCriteria === undefined ? task.acceptanceCriteria : acceptanceCriteria,
       }
       const next: Doc = { ...task, ...patch, revision: (task.revision as number) + 1, updatedAt: now }
       await tx.set(COLLECTIONS.tasks, next)
@@ -361,6 +409,7 @@ export async function submitTask(
   }
 ): Promise<{ task: TaskPublicView; submission: SubmissionView }> {
   const now = deps.now()
+  const note = normalizeMultiLine(input.note, { min: 1, max: 1000, field: '交付说明' })
   const attachments = Array.isArray(input.attachmentIds) ? input.attachmentIds : []
   if (attachments.length > MAX_ATTACHMENTS) {
     throw new AppError('validation_failed', `附件最多 ${MAX_ATTACHMENTS} 个`)
@@ -381,7 +430,7 @@ export async function submitTask(
       action: 'task.submit',
       mutationId: input.mutationId,
       expectedRevision: input.expectedRevision,
-      data: { taskId: input.taskId, note: input.note, attachmentIds: attachments, targetRound: input.targetRound ?? null },
+      data: { taskId: input.taskId, note, attachmentIds: attachments, targetRound: input.targetRound ?? null },
     },
     async (tx) => {
       const tenant = await resolveTenant(tx, trusted, clubId)
@@ -424,6 +473,9 @@ export async function submitTask(
           }
           if (attachment.integrityState !== 'VERIFIED') {
             throw new AppError('attachment_not_ready', '附件尚未完成校验')
+          }
+          if (!ALLOWED_SCAN_STATES.includes(attachment.scanState as string)) {
+            throw new AppError('attachment_not_ready', '附件安全状态不可交付')
           }
           if (attachment.lifecycleState !== 'DRAFT') {
             throw new AppError('attachment_forbidden', '附件已被其他交付绑定或待回收')
@@ -494,7 +546,7 @@ export async function submitTask(
         taskId: input.taskId,
         round,
         submittedByMemberId: tenant.member._id,
-        note: input.note,
+        note,
         attachmentIds: attachments,
         taskRevisionAtSubmit: task.revision,
         status: 'SUBMITTED',
@@ -541,10 +593,18 @@ async function reviewSubmission(
   input: { taskId: string; submissionId: string; grade?: string; note?: string; reason?: string; expectedRevision: number; mutationId: string }
 ): Promise<{ task: TaskPublicView; submission: SubmissionView }> {
   const now = deps.now()
+  const grade =
+    input.grade === undefined ? undefined : normalizeSingleLine(input.grade, { min: 1, max: 1, field: '验收等级' })
+  const note =
+    input.note === undefined ? undefined : normalizeMultiLine(input.note, { min: 0, max: 500, field: '验收备注' })
+  const reason =
+    input.reason === undefined
+      ? undefined
+      : normalizeSingleLine(input.reason, { min: 1, max: 500, field: '驳回原因' })
   const data: Record<string, unknown> = { taskId: input.taskId, submissionId: input.submissionId }
-  if (input.grade !== undefined) data.grade = input.grade
-  if (input.note !== undefined) data.note = input.note
-  if (input.reason !== undefined) data.reason = input.reason
+  if (grade !== undefined) data.grade = grade
+  if (note !== undefined) data.note = note
+  if (reason !== undefined) data.reason = reason
 
   const run = await runIdempotent(
     deps.db,
@@ -573,18 +633,18 @@ async function reviewSubmission(
       if (submission.status !== 'SUBMITTED') throw new AppError('invalid_transition', '该轮次已被处理')
 
       const approved = action === 'task.approve'
-      if (approved && !GRADES.includes(input.grade as string)) {
+      if (approved && !GRADES.includes(grade as string)) {
         throw new AppError('validation_failed', 'grade 必须是 A/B/C/D')
       }
-      if (!approved && !(input.reason && input.reason.length > 0)) {
+      if (!approved && !reason) {
         throw new AppError('validation_failed', '驳回原因必填')
       }
 
       const nextSub: Doc = {
         ...submission,
         status: approved ? 'APPROVED' : 'REJECTED',
-        reviewGrade: approved ? input.grade : null,
-        reviewNote: approved ? (input.note ?? null) : (input.reason ?? null),
+        reviewGrade: approved ? grade : null,
+        reviewNote: approved ? (note || null) : reason,
         reviewedByMemberId: tenant.member._id,
         reviewedAt: now,
         updatedAt: now,
@@ -797,12 +857,21 @@ export async function commandStatus(
   const now = deps.now()
   const actor = actorIdentityId(trusted)
   const scopeKey = scopeCanonical(scope)
+  let currentRole: string | null = null
+  let currentIsPrimaryOwner = false
 
   if (scope.kind === 'TEAM') {
-    await deps.db.tx(async (tx) => resolveTenant(tx, trusted, scope.clubId))
+    await deps.db.tx(async (tx) => {
+      const tenant = await resolveTenant(tx, trusted, scope.clubId)
+      currentRole = tenant.member.role as string
+      currentIsPrimaryOwner = tenant.club.ownerMemberId === tenant.member._id
+    })
   } else {
     const identity = await deps.db.read(COLLECTIONS.identities, actor)
-    if (!identity) throw new AppError('identity_required')
+    if (!identity || typeof identity.userId !== 'string') throw new AppError('identity_required')
+    const user = await deps.db.read(COLLECTIONS.users, identity.userId)
+    if (!user) throw new AppError('identity_required')
+    if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
   }
 
   const id = commandId(scopeKey, actor, input.action, input.mutationId)
@@ -810,6 +879,15 @@ export async function commandStatus(
   if (!doc) {
     const time = mutationTimeMs(input.mutationId)
     return { status: classifyMissingCommand(time, now) as CommandQueryStatus, resultSummary: null }
+  }
+  const resultUntil = doc.resultUntil
+  if (typeof resultUntil !== 'number' || now > resultUntil) {
+    return { status: 'EXPIRED', resultSummary: null }
+  }
+  const storedRole = (doc.actorRole as string | null | undefined) ?? null
+  const storedIsPrimaryOwner = doc.actorIsPrimaryOwner === true
+  if (storedRole !== currentRole || storedIsPrimaryOwner !== currentIsPrimaryOwner) {
+    throw new AppError('permission_denied', '命令结果不可在当前授权状态下读取')
   }
   return { status: doc.status as CommandQueryStatus, resultSummary: JSON.parse(doc.resultSummary as string) }
 }

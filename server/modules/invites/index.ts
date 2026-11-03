@@ -11,8 +11,9 @@ import {
 } from '../../repositories/ids.ts'
 import { requireManagerPlus } from '../../shared/authorization.ts'
 import { writeAudit } from '../../shared/audit.ts'
-import { assertMutationFresh } from '../../shared/command.ts'
+import { assertMutationFresh, IDEMPOTENCY_RETAIN_MS, RESULT_WINDOW_MS } from '../../shared/command.ts'
 import { maskCode } from '../../shared/join-token.ts'
+import { normalizeSingleLine } from '../../shared/text.ts'
 import { resolveTenant, toTenantContext } from '../context.ts'
 import { runIdempotent } from '../command.ts'
 
@@ -95,6 +96,9 @@ export async function createInvite(
   assertMutationFresh(input.mutationId, now)
 
   return deps.db.tx(async (tx) => {
+    const tenant = await resolveTenant(tx, trusted, clubId)
+    requireManagerPlus(toTenantContext(trusted, tenant))
+
     const existing = await tx.get(COLLECTIONS.commands, commandDocId)
     if (existing) {
       if (existing.inputHash !== inputHash) throw new AppError('idempotency_conflict')
@@ -102,9 +106,6 @@ export async function createInvite(
       // 明文只在生成当次返回；重放不返回明文
       return { ...summary, plaintextCode: null, replayed: true }
     }
-
-    const tenant = await resolveTenant(tx, trusted, clubId)
-    requireManagerPlus(toTenantContext(trusted, tenant))
 
     await tx.set(COLLECTIONS.invites, {
       _id: inviteId,
@@ -130,12 +131,16 @@ export async function createInvite(
       _id: commandDocId,
       scope: `TEAM:${clubId}`,
       actorIdentityId: identityId(trusted.appId, trusted.openid),
+      actorRole: tenant.member.role as string,
+      actorIsPrimaryOwner: tenant.club.ownerMemberId === tenant.member._id,
       action: 'invite.create',
       inputHash,
       status: 'SUCCEEDED',
       resultSummary: JSON.stringify(summary),
       createdAt: now,
       completedAt: now,
+      resultUntil: now + RESULT_WINDOW_MS,
+      retainUntil: now + IDEMPOTENCY_RETAIN_MS,
     })
     await writeAudit(tx, {
       scope: `TEAM:${clubId}`,
@@ -215,6 +220,7 @@ export async function redeem(
   input: { code?: string; sceneToken?: string; displayName: string; mutationId: string }
 ): Promise<RedeemResult> {
   const now = deps.now()
+  const displayName = normalizeSingleLine(input.displayName, { field: '展示名', min: 1, max: 16 })
   const codeHash = input.code ? hashInviteCode(input.code) : null
   const sceneHash = input.sceneToken ? hashSceneToken(input.sceneToken) : null
   if (!codeHash && !sceneHash) throw new AppError('validation_failed', '需要 code 或 sceneToken')
@@ -237,11 +243,13 @@ export async function redeem(
       actorIdentityId: identityId(trusted.appId, trusted.openid),
       action: 'invite.redeem',
       mutationId: input.mutationId,
-      data: { code: input.code, sceneToken: input.sceneToken, displayName: input.displayName },
+      data: { code: input.code, sceneToken: input.sceneToken, displayName },
     },
     async (tx) => {
       const invite = await tx.get(COLLECTIONS.invites, inviteId)
       if (!invite || invite.clubId !== clubId) throw new AppError('resource_not_found')
+      const club = await tx.get(COLLECTIONS.clubs, clubId)
+      if (!club || club.status !== 'ACTIVE') throw new AppError('resource_not_found', '目标团队当前不可加入')
       if (typeof invite.revokedAt === 'number') throw new AppError('validation_failed', '邀请码已作废')
       const expiresAt = invite.expiresAt as number | null
       if (typeof expiresAt === 'number' && now > expiresAt) throw new AppError('validation_failed', '邀请码已过期')
@@ -268,7 +276,7 @@ export async function redeem(
         _id: mId,
         clubId,
         userId,
-        displayName: input.displayName,
+        displayName,
         duty: null,
         role: 'member',
         status: 'ACTIVE',
@@ -298,14 +306,11 @@ export async function redeem(
         })
       }
 
-      const club = await tx.get(COLLECTIONS.clubs, clubId)
-      if (club) {
-        await tx.set(COLLECTIONS.clubs, {
-          ...club,
-          mutationSeq: ((club.mutationSeq as number) ?? 0) + 1,
-          updatedAt: now,
-        })
-      }
+      await tx.set(COLLECTIONS.clubs, {
+        ...club,
+        mutationSeq: ((club.mutationSeq as number) ?? 0) + 1,
+        updatedAt: now,
+      })
       if (user) {
         await tx.set(COLLECTIONS.users, {
           ...user,

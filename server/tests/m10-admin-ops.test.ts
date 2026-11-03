@@ -8,6 +8,7 @@ import * as dismissals from '../modules/dismissals/index.ts'
 import * as dissolutions from '../modules/dissolutions/index.ts'
 import * as members from '../modules/members/index.ts'
 import * as teams from '../modules/teams/index.ts'
+import { commandStatus } from '../modules/tasks/index.ts'
 
 /**
  * 管理员/超级管理员三项管理能力（2026-10-18）。
@@ -286,13 +287,21 @@ test('裁员：驳回理由必填；驳回后可重新发起', async () => {
     (e) => codeOf(e) === 'validation_failed'
   )
 
+  const rejectMutation = h.nextMutationId()
   const rejected = await dismissals.rejectDismissal(deps, h.manager2.identity, h.clubId, {
     dismissalId: requested.dismissalId,
     rejectReason: '证据不足',
-    mutationId: h.nextMutationId(),
+    mutationId: rejectMutation,
     expectedRevision: 1,
   })
   assert.equal(rejected.status, 'REJECTED')
+  const replay = await dismissals.rejectDismissal(deps, h.manager2.identity, h.clubId, {
+    dismissalId: requested.dismissalId,
+    rejectReason: '证据不足',
+    mutationId: rejectMutation,
+    expectedRevision: 1,
+  })
+  assert.deepEqual(replay, rejected)
 
   const again = await dismissals.requestDismissal(deps, h.manager1.identity, h.clubId, {
     targetMemberId: h.plain.memberId,
@@ -373,14 +382,21 @@ test('解散：管理员提交协助申请 → 任一超管可批准（跨队）
   assert.equal(list.items.length, 1)
   assert.equal(list.items[0].clubId, h.clubId)
 
+  const decisionMutation = h.nextMutationId()
   const decided = await dissolutions.decideDissolution(deps, ownerB.identity, {
     clubId: h.clubId,
     approve: true,
-    mutationId: h.nextMutationId(),
+    mutationId: decisionMutation,
     expectedRevision: request.revision,
   })
   assert.equal(decided.status, 'APPROVED')
   assert.equal((await h.db.read(COLLECTIONS.clubs, h.clubId))?.status, 'DISSOLVED')
+  const status = await commandStatus(deps, ownerB.identity, { kind: 'GLOBAL' }, {
+    action: 'club.dissolution.decide',
+    mutationId: decisionMutation,
+  })
+  assert.equal(status.status, 'SUCCEEDED')
+  assert.equal((status.resultSummary as { clubId?: string }).clubId, h.clubId)
 })
 
 test('解散：超管可跨队直接解散任意团队；非超管被拒', async () => {

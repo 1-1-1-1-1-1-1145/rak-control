@@ -160,3 +160,36 @@ test('invite：撤销/过期不可兑换；DISABLED 不能借码复活', async (
     (e: unknown) => (e as { code?: string }).code === 'membership_disabled'
   )
 })
+
+test('invite.redeem：BLOCKED 账户和已解散团队均不可兑换', async () => {
+  const seed = await seedTeam()
+  const ids = labelIds(seed.clock)
+  const deps = inviteDeps(seed)
+  const created = await createInvite(deps, seed.ownerIdentity, seed.clubId, { mutationId: ids('c1') })
+  const user = await applicant(seed, 'blocked-applicant')
+  const identity = await seed.db.read(COLLECTIONS.identities, identityId(APP_ID, 'blocked-applicant'))
+  const userId = identity?.userId as string
+
+  await seed.db.tx(async (tx) => {
+    const account = await tx.get(COLLECTIONS.users, userId)
+    if (!account) throw new Error('夹具：用户缺失')
+    await tx.set(COLLECTIONS.users, { ...account, securityState: 'BLOCKED' })
+  })
+  await assert.rejects(
+    () => redeem(deps, user, { code: created.plaintextCode as string, displayName: '申请人', mutationId: ids('d1') }),
+    (e: unknown) => (e as { code?: string }).code === 'account_blocked'
+  )
+
+  await seed.db.tx(async (tx) => {
+    const account = await tx.get(COLLECTIONS.users, userId)
+    const club = await tx.get(COLLECTIONS.clubs, seed.clubId)
+    if (!account || !club) throw new Error('夹具：文档缺失')
+    await tx.set(COLLECTIONS.users, { ...account, securityState: 'NORMAL' })
+    await tx.set(COLLECTIONS.clubs, { ...club, status: 'DISSOLVED' })
+  })
+  await assert.rejects(
+    () => redeem(deps, user, { code: created.plaintextCode as string, displayName: '申请人', mutationId: ids('d2') }),
+    (e: unknown) => (e as { code?: string }).code === 'resource_not_found'
+  )
+  assert.equal((await seed.db.read(COLLECTIONS.invites, created.inviteId))?.usedCount, 0)
+})

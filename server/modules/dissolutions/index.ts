@@ -286,7 +286,7 @@ export async function decideDissolution(
     {
       scope: { kind: 'GLOBAL' },
       actorIdentityId: identityId(trusted.appId, trusted.openid),
-      action: input.approve ? 'club.dissolution.approve' : 'club.dissolution.reject',
+      action: 'club.dissolution.decide',
       mutationId: input.mutationId,
       expectedRevision: input.expectedRevision,
       data: input.approve ? { clubId: input.clubId } : { clubId: input.clubId, rejectReason },
@@ -328,7 +328,7 @@ export async function decideDissolution(
       await writeAudit(tx, {
         scope: 'GLOBAL',
         actorMemberId: actor.actorMemberId,
-        action: input.approve ? 'club.dissolution.approve' : 'club.dissolution.reject',
+        action: 'club.dissolution.decide',
         resourceType: 'club',
         resourceId: input.clubId,
         seed: input.mutationId,

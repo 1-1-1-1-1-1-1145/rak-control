@@ -159,6 +159,33 @@ test('setStatus：manager 仅可管理 member；LEFT 不得借 setStatus 复活'
   )
 })
 
+test('setStatus：普通 super_admin 不能停用另一位 super_admin，但仍可管理 member', async () => {
+  const seed = await seedTeam()
+  const ids = labelIds(seed.clock)
+  const superA = await addMemberWithIdentity(seed.db, seed.clubId, 'super-a', '超管A', 'super_admin')
+  const superB = await addMemberWithIdentity(seed.db, seed.clubId, 'super-b', '超管B', 'super_admin')
+  const member = await addMemberWithIdentity(seed.db, seed.clubId, 'member-1', '成员', 'member')
+
+  await assert.rejects(
+    () =>
+      setStatus(deps(seed), superA.identity, seed.clubId, {
+        targetMemberId: superB.memberId,
+        targetStatus: 'DISABLED',
+        expectedRevision: 1,
+        mutationId: ids('super-blocked'),
+      }),
+    (e: unknown) => (e as { code?: string }).code === 'permission_denied'
+  )
+
+  const disabled = await setStatus(deps(seed), superA.identity, seed.clubId, {
+    targetMemberId: member.memberId,
+    targetStatus: 'DISABLED',
+    expectedRevision: 1,
+    mutationId: ids('member-disabled'),
+  })
+  assert.equal(disabled.status, 'DISABLED')
+})
+
 test('updateMyProfile：本人改展示名；任何成员可自改职务（2026-10-18 解除仅 owner 限制）', async () => {
   const seed = await seedTeam()
   const ids = labelIds(seed.clock)

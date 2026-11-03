@@ -223,15 +223,25 @@ export async function cloudLoadTeamPage(
 ): Promise<{ items: TeamListItemView[]; nextCursor: string | null; hasMore: boolean } | null> {
   requireCloud()
   const rt = cloudTeamRuntime()
+  const before = rt.account.capture()
+  if (!before.accountKey) return null
   try {
     await ensureCloudReady()
     const page = await cloudTeamListMine(opts)
+    const current = rt.account.capture()
+    if (!current.accountKey || current.accountKey !== before.accountKey || current.accountEpoch !== before.accountEpoch) {
+      return null
+    }
     rt.teams = opts.cursor ? [...rt.teams, ...page.items] : page.items
     rt.teamCursor = page.nextCursor
     rt.teamsHasMore = page.hasMore
     rt.teamListError = null
     return { items: page.items, nextCursor: page.nextCursor, hasMore: page.hasMore }
   } catch (error) {
+    const current = rt.account.capture()
+    if (!current.accountKey || current.accountKey !== before.accountKey || current.accountEpoch !== before.accountEpoch) {
+      return null
+    }
     rt.teamListError = error instanceof Error ? error.message : '加载团队列表失败'
     return null
   }
@@ -254,15 +264,25 @@ export async function cloudLoadMyJoins(
 ): Promise<{ items: JoinMineItem[]; nextCursor: string | null; hasMore: boolean } | null> {
   requireCloud()
   const rt = cloudTeamRuntime()
+  const before = rt.account.capture()
+  if (!before.accountKey) return null
   try {
     await ensureCloudReady()
     const page = await cloudJoinMine(opts)
+    const current = rt.account.capture()
+    if (!current.accountKey || current.accountKey !== before.accountKey || current.accountEpoch !== before.accountEpoch) {
+      return null
+    }
     rt.joins = opts.cursor ? [...rt.joins, ...page.items] : page.items
     rt.joinCursor = page.nextCursor
     rt.joinsHasMore = page.hasMore
     rt.joinListError = null
     return { items: page.items, nextCursor: page.nextCursor, hasMore: page.hasMore }
   } catch (error) {
+    const current = rt.account.capture()
+    if (!current.accountKey || current.accountKey !== before.accountKey || current.accountEpoch !== before.accountEpoch) {
+      return null
+    }
     rt.joinListError = error instanceof Error ? error.message : '加载入队申请失败'
     return null
   }
@@ -312,7 +332,7 @@ export async function cloudUpdateMyProfile(input: {
     expectedRevision: ctx.membershipRevision,
     mutationId: createMutationId(),
   })
-  rt.team.applyProfile({ displayName: view.displayName, duty: view.duty, revision: view.revision })
+  rt.team.applyProfile(ctx, { displayName: view.displayName, duty: view.duty, revision: view.revision })
   return view
 }
 
