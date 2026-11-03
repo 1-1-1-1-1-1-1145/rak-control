@@ -14,7 +14,9 @@ pnpm build:weapp
 
 ## 云端开发（cloud-v2）
 
-正式业务走 CloudBase 云函数（[ADR-0006](../adr/adr-0006-cloudbase-multiteam-backend.md)、[cloud-v2 契约](../api/cloud-v2.md)）。当前 **M1 为 fail-closed 骨架**：业务动作返回 `not_implemented`，真实云端验收在 M8/M9。
+正式业务走 CloudBase 云函数（[ADR-0006](../adr/adr-0006-cloudbase-multiteam-backend.md)、[cloud-v2 契约](../api/cloud-v2.md)）。当前已完成身份、团队、成员、入会、任务、公告、ROI、绩效及分片上传的主要云端链路，并保留 fail-closed 默认：运行时配置缺失、未知动作或尚未完成的能力明确返回 `not_implemented`，不会回退到演示或 HTTP。
+
+私有附件下载与草稿预览仍待上传/下载凭证 TTL 和真实对象恢复能力验证；双微信账号、双设备及真实文件字节验收仍为 NOT_RUN。本地单测与构建门禁不能替代这些云端和真机验收。
 
 ```powershell
 pnpm test:server            # 云端契约/拒绝/幂等单测（server/tests）

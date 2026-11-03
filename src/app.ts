@@ -1,6 +1,5 @@
 import { PropsWithChildren } from 'react'
-import { useDidShow, useLaunch } from '@tarojs/taro'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
 import { uiStore } from '@/store'
 import { ensureAppBooted } from '@/store/app-boot'
 import { consumeDeepLink } from '@/utils/deep-link-entry'
