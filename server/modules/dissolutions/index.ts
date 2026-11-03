@@ -73,8 +73,11 @@ async function requireAnySuperAdmin(
     COLLECTIONS.members,
     (doc) => doc.userId === userId && doc.role === 'super_admin' && doc.status === 'ACTIVE'
   )
-  if (memberships.length === 0) throw new AppError('permission_denied', '仅超级管理员可执行此操作')
-  return { userId, actorMemberId: memberships[0]._id }
+  for (const membership of memberships) {
+    const club = await db.read(COLLECTIONS.clubs, membership.clubId as string)
+    if (club?.status === 'ACTIVE') return { userId, actorMemberId: membership._id }
+  }
+  throw new AppError('permission_denied', '仅超级管理员可执行此操作')
 }
 
 async function assertActorStillSuperAdmin(
@@ -83,6 +86,10 @@ async function assertActorStillSuperAdmin(
 ): Promise<void> {
   const actor = await tx.get(COLLECTIONS.members, actorMemberId)
   if (!actor || actor.status !== 'ACTIVE' || actor.role !== 'super_admin') {
+    throw new AppError('permission_denied', '超级管理员身份已失效')
+  }
+  const actorClub = await tx.get(COLLECTIONS.clubs, actor.clubId as string)
+  if (!actorClub || actorClub.status !== 'ACTIVE') {
     throw new AppError('permission_denied', '超级管理员身份已失效')
   }
 }

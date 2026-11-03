@@ -46,6 +46,7 @@ const TASK_CATEGORIES: readonly string[] = [
   'infra',
   'ops',
 ]
+const GLOBAL_SUPER_ADMIN_ACTIONS = new Set(['club.dissolution.decide', 'club.dissolveAny'])
 
 export interface TaskPublicView {
   taskId: string
@@ -847,6 +848,18 @@ export type CommandQueryStatus =
   | 'ABSENT_IN_WINDOW'
   | 'EXPIRED'
 
+async function hasActiveSuperAdmin(deps: TasksDeps, userId: string): Promise<boolean> {
+  const memberships = await deps.db.query(
+    COLLECTIONS.members,
+    (doc) => doc.userId === userId && doc.role === 'super_admin' && doc.status === 'ACTIVE'
+  )
+  for (const membership of memberships) {
+    const club = await deps.db.read(COLLECTIONS.clubs, membership.clubId as string)
+    if (club?.status === 'ACTIVE') return true
+  }
+  return false
+}
+
 /** command.status：scope 必须与原命令一致；只查本人命令；查不到不等于失败。 */
 export async function commandStatus(
   deps: TasksDeps,
@@ -859,6 +872,7 @@ export async function commandStatus(
   const scopeKey = scopeCanonical(scope)
   let currentRole: string | null = null
   let currentIsPrimaryOwner = false
+  let currentUserId = ''
 
   if (scope.kind === 'TEAM') {
     await deps.db.tx(async (tx) => {
@@ -872,6 +886,7 @@ export async function commandStatus(
     const user = await deps.db.read(COLLECTIONS.users, identity.userId)
     if (!user) throw new AppError('identity_required')
     if (user.securityState === 'BLOCKED') throw new AppError('account_blocked')
+    currentUserId = identity.userId
   }
 
   const id = commandId(scopeKey, actor, input.action, input.mutationId)
@@ -888,6 +903,13 @@ export async function commandStatus(
   const storedIsPrimaryOwner = doc.actorIsPrimaryOwner === true
   if (storedRole !== currentRole || storedIsPrimaryOwner !== currentIsPrimaryOwner) {
     throw new AppError('permission_denied', '命令结果不可在当前授权状态下读取')
+  }
+  if (
+    scope.kind === 'GLOBAL' &&
+    GLOBAL_SUPER_ADMIN_ACTIONS.has(input.action) &&
+    !(await hasActiveSuperAdmin(deps, currentUserId))
+  ) {
+    throw new AppError('permission_denied', '超管权限已变化')
   }
   return { status: doc.status as CommandQueryStatus, resultSummary: JSON.parse(doc.resultSummary as string) }
 }

@@ -354,6 +354,15 @@ test('解散：本队 manager 可直接解散；解散后不可进入、列表�
   await assert.rejects(() => teams.enter(deps, h.manager2.identity, h.clubId), (e) => codeOf(e) === 'resource_not_found')
   const page = await teams.listMine(deps, h.manager2.identity)
   assert.equal(page.items.length, 0)
+  await assert.rejects(
+    () =>
+      dissolutions.dissolveAnyClub(deps, h.ownerIdentity, {
+        clubId: 'another-club',
+        reason: '原超管团队已解散',
+        mutationId: h.nextMutationId(),
+      }),
+    (e) => codeOf(e) === 'permission_denied'
+  )
 
   const audits = await h.db.query(COLLECTIONS.audit, (d) => d.action === 'club.dissolve')
   assert.equal(audits.length, 1)
